@@ -108,6 +108,12 @@ static inline int at91mci_is_mci1rev2xx(void)
 #define MCI_BLKATONCE 		256
 #define MCI_BUFSIZE 		(MCI_BLKSIZE * MCI_BLKATONCE)
 
+/* param_f_max limit */
+#define PARAM_F_MAX_MIN	400000
+#define PARAM_F_MAX_MAX	25000000
+
+unsigned int param_f_max = PARAM_F_MAX_MAX;
+
 /*
  * Low level type for this driver
  */
@@ -745,9 +751,15 @@ static void at91_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		switch (ios->power_mode) {
 			case MMC_POWER_OFF:
 				gpio_set_value(host->board->vcc_pin, 0);
+#ifdef CONFIG_MMC_AT91_WL12XX
+				msleep(100);
+#endif
 				break;
 			case MMC_POWER_UP:
 				gpio_set_value(host->board->vcc_pin, 1);
+#ifdef CONFIG_MMC_AT91_WL12XX
+				msleep(100);
+#endif
 				break;
 			case MMC_POWER_ON:
 				break;
@@ -950,9 +962,21 @@ static int __init at91_mci_probe(struct platform_device *pdev)
 
 	mmc->ops = &at91_mci_ops;
 	mmc->f_min = 375000;
-	mmc->f_max = 25000000;
+	
+	if (param_f_max < PARAM_F_MAX_MIN) {
+		mmc->f_max = PARAM_F_MAX_MIN;
+	} else if (param_f_max > PARAM_F_MAX_MAX) {
+		mmc->f_max = PARAM_F_MAX_MAX;
+	} else {
+		mmc->f_max = param_f_max;
+	}
+	
 	mmc->ocr_avail = MMC_VDD_32_33 | MMC_VDD_33_34;
 	mmc->caps = 0;
+
+#ifdef CONFIG_MMC_AT91_WL12XX
+	mmc->caps |= MMC_CAP_NONREMOVABLE;
+#endif	
 
 	mmc->max_blk_size  = MCI_MAXBLKSIZE;
 	mmc->max_blk_count = MCI_BLKATONCE;
@@ -1213,6 +1237,9 @@ static void __exit at91_mci_exit(void)
 
 module_init(at91_mci_init);
 module_exit(at91_mci_exit);
+
+module_param_named(f_max, param_f_max, uint, S_IRUSR | S_IWUSR);
+MODULE_PARM_DESC(debug_level, "max frequency of MCI clock");
 
 MODULE_DESCRIPTION("AT91 Multimedia Card Interface driver");
 MODULE_AUTHOR("Nick Randell");
