@@ -15,6 +15,7 @@
 
 #ifndef _BOARD_AM335X_H
 #define _BOARD_AM335X_H
+#define IRTK2_ZHD
 
 #define BASEBOARD_I2C_ADDR	0x50
 #define DAUG_BOARD_I2C_ADDR	0x51
@@ -37,6 +38,7 @@
 #define PROFILE_6		(0x1 << 6)
 #define PROFILE_7		(0x1 << 7)
 #define PROFILE_ALL		0xFF
+
 
 #ifndef __ASSEMBLER__
 void am335x_evm_set_id(unsigned int evmid);

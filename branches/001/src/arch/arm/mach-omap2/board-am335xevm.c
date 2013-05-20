@@ -90,6 +90,10 @@ static const struct display_panel disp_panel = {
 	COLOR_ACTIVE,
 };
 
+//#ifdef IRTK2_ZHD
+//#error "the head file works!"
+//#endif
+
 /* LCD backlight platform Data */
 #define AM335X_BACKLIGHT_MAX_BRIGHTNESS        100
 #define AM335X_BACKLIGHT_DEFAULT_BRIGHTNESS    100
@@ -580,13 +584,23 @@ static struct pinmux_config i2c1_pin_mux[] = {
 	{NULL, 0},
 };
 
+
+
 static struct pinmux_config i2c2_pin_mux[] = {
+#ifdef IRTK2_ZHD
+	{"spi0_sclk.i2c2_sda",    OMAP_MUX_MODE2 | AM33XX_SLEWCTRL_SLOW |
+					AM33XX_PULL_UP | AM33XX_INPUT_EN},
+	{"spi0_d0.i2c2_scl",   OMAP_MUX_MODE2 | AM33XX_SLEWCTRL_SLOW |
+					AM33XX_PULL_UP | AM33XX_INPUT_EN},
+#else
 	{"uart1_ctsn.i2c2_sda",    OMAP_MUX_MODE3 | AM33XX_SLEWCTRL_SLOW |
 					AM33XX_PULL_UP | AM33XX_INPUT_EN},
 	{"uart1_rtsn.i2c2_scl",   OMAP_MUX_MODE3 | AM33XX_SLEWCTRL_SLOW |
 					AM33XX_PULL_UP | AM33XX_INPUT_EN},
+#endif
 	{NULL, 0},
 };
+
 
 /* Module pin mux for mcasp1 */
 static struct pinmux_config mcasp1_pin_mux[] = {
@@ -670,11 +684,19 @@ static struct pinmux_config d_can_ia_pin_mux[] = {
 
 /* Module pin mux for uart2 */
 static struct pinmux_config uart2_pin_mux[] = {
+#ifdef IRTK2_ZHD
+	{"mii1_crs.uart2_rxd", OMAP_MUX_MODE6 | AM33XX_SLEWCTRL_SLOW |
+						AM33XX_PIN_INPUT_PULLUP},
+	{"mii1_rxerr.uart2_txd", OMAP_MUX_MODE6 | AM33XX_PULL_UP |
+						AM33XX_PULL_DISA |
+						AM33XX_SLEWCTRL_SLOW},
+#else
 	{"spi0_sclk.uart2_rxd", OMAP_MUX_MODE1 | AM33XX_SLEWCTRL_SLOW |
 						AM33XX_PIN_INPUT_PULLUP},
 	{"spi0_d0.uart2_txd", OMAP_MUX_MODE1 | AM33XX_PULL_UP |
 						AM33XX_PULL_DISA |
 						AM33XX_SLEWCTRL_SLOW},
+#endif
 	{NULL, 0},
 };
 
@@ -701,6 +723,22 @@ static struct pinmux_config gpio_ddr_vtt_enb_pin_mux[] = {
 	{NULL, 0},
 };
 
+//pin, added by ebd-bo
+//see mux33xx.c for details
+static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
+	{"lcd_hsync.gpio2_23", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},//system power enable
+	{"lcd_pclk.gpio2_24", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},//ddr3 power enable
+	{"gpio0_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},//uart select 
+	{"lcd_data11.gpio2_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led and misc power enbale
+	{NULL, 0},
+};
+
+static struct pinmux_config dcan_irtk2_pin_mux[]={
+	{"uart1_ctsn.d_can0_tx", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL},
+	{"uart1_rtsn.d_can0_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
+};
+
+
 /*
 * @pin_mux - single module pin-mux structure which defines pin-mux
 *			details for all its pins.
@@ -712,6 +750,25 @@ static void setup_pin_mux(struct pinmux_config *pin_mux)
 	for (i = 0; pin_mux->string_name != NULL; pin_mux++)
 		omap_mux_init_signal(pin_mux->string_name, pin_mux->val);
 
+}
+
+//func, added by ebd-bo
+static void bootup_enb_pin_init(int evm_id, int profile)
+{
+	(void)evm_id;
+	(void)profile;
+	pr_debug(">>>>%s(): set up gpio\n", __func__);
+	setup_pin_mux(gpio_irtk2_enb_pin_mux);
+	return;
+}
+
+static void dcan_init(int evm_id, int profile)
+{
+	(void)evm_id;
+	(void)profile;
+	setup_pin_mux(dcan_irtk2_pin_mux);
+	/* Instance zero */
+	am33xx_d_can_init(0);
 }
 
 /* Matrix GPIO Keypad Support for profile-0 only: TODO */
@@ -1584,7 +1641,11 @@ static void i2c1_init(int evm_id, int profile)
 	return;
 }
 
-static struct i2c_board_info am335x_i2c2_boardinfo[] = {
+
+static struct i2c_board_info am335x_i2c2_boardinfo[] = {	
+	{
+		I2C_BOARD_INFO("tmp275", 0x48),
+	},
 };
 
 static void i2c2_init(int evm_id, int profile)
@@ -1615,13 +1676,22 @@ static void mmc1_init(int evm_id, int profile)
 {
 	setup_pin_mux(mmc1_common_pin_mux);
 	setup_pin_mux(mmc1_dat4_7_pin_mux);
+#ifndef IRTK2_ZHD //for evm
 	setup_pin_mux(mmc1_wp_only_pin_mux);
 	setup_pin_mux(mmc1_cd_only_pin_mux);
+#endif
 
 	am335x_mmc[1].mmc = 2;
+#ifdef IRTK2_ZHD //for irtk2
+	am335x_mmc[1].caps = MMC_CAP_8_BIT_DATA;
+	am335x_mmc[1].nonremovable = true;
+	am335x_mmc[1].gpio_cd = -EINVAL;
+	am335x_mmc[1].gpio_wp = -EINVAL;
+#else
 	am335x_mmc[1].caps = MMC_CAP_4_BIT_DATA;
 	am335x_mmc[1].gpio_cd = GPIO_TO_PIN(2, 2);
 	am335x_mmc[1].gpio_wp = GPIO_TO_PIN(1, 29);
+#endif
 	am335x_mmc[1].ocr_mask = MMC_VDD_32_33 | MMC_VDD_33_34; /* 3V3 */
 
 	/* mmc will be initialized when mmc0_init is called */
@@ -1985,8 +2055,26 @@ static void profibus_init(int evm_id, int profile)
 	return;
 }
 
+//mark
 /* General Purpose EVM */
 static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
+#ifdef IRTK2_ZHD
+	{bootup_enb_pin_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{usb0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{rgmii1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{i2c1_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
+	{i2c2_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
+	{mcasp1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{mmc1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	//{mmc2_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{mmc0_no_cd_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	//{wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{dcan_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{uart2_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{uart3_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{NULL, 0, 0},
+#endif
 	{enable_ecap0,	DEV_ON_DGHTR_BRD, (PROFILE_0 | PROFILE_1 |
 						PROFILE_2 | PROFILE_7) },
 	{lcdc_init,	DEV_ON_DGHTR_BRD, (PROFILE_0 | PROFILE_1 |
@@ -2195,7 +2283,7 @@ static void am335x_evm_setup(struct memory_accessor *mem_acc, void *context)
 {
 	int ret;
 	char tmp[10];
-
+#ifndef IRTK2_ZHD
 	/* 1st get the MAC address from EEPROM */
 	ret = mem_acc->read(mem_acc, (char *)&am335x_mac_addr,
 		EEPROM_MAC_ADDRESS_OFFSET, sizeof(am335x_mac_addr));
@@ -2234,6 +2322,8 @@ static void am335x_evm_setup(struct memory_accessor *mem_acc, void *context)
 	snprintf(tmp, sizeof(config.version) + 1, "%s", config.version);
 	pr_info("Board version: %s\n", tmp);
 
+
+
 	if (!strncmp("A335BONE", config.name, 8)) {
 		daughter_brd_detected = false;
 		if(!strncmp("00A1", config.version, 4) ||
@@ -2256,7 +2346,9 @@ static void am335x_evm_setup(struct memory_accessor *mem_acc, void *context)
 		else
 			goto out;
 	}
-
+#else
+	setup_general_purpose_evm();
+#endif
 	/* SmartReflex also requires board information. */
 	am33xx_sr_init();
 
