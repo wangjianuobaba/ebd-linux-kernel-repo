@@ -199,8 +199,13 @@ static struct omap2_hsmmc_info am335x_mmc[] __initdata = {
 	{
 		.mmc            = 1,
 		.caps           = MMC_CAP_4_BIT_DATA,
+#ifdef IRTK2_ZHD
+		.gpio_cd        = -EINVAL,
+		.gpio_wp        = -EINVAL,
+#else
 		.gpio_cd        = GPIO_TO_PIN(0, 6),
 		.gpio_wp        = GPIO_TO_PIN(3, 18),
+#endif
 		.ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34, /* 3V3 */
 	},
 	{
@@ -585,13 +590,12 @@ static struct pinmux_config i2c1_pin_mux[] = {
 };
 
 
-
 static struct pinmux_config i2c2_pin_mux[] = {
 #ifdef IRTK2_ZHD
-	{"spi0_sclk.i2c2_sda",    OMAP_MUX_MODE2 | AM33XX_SLEWCTRL_SLOW |
-					AM33XX_PULL_UP | AM33XX_INPUT_EN},
-	{"spi0_d0.i2c2_scl",   OMAP_MUX_MODE2 | AM33XX_SLEWCTRL_SLOW |
-					AM33XX_PULL_UP | AM33XX_INPUT_EN},
+	{"spi0_sclk.i2c2_sda",    OMAP_MUX_MODE2 | AM33XX_SLEWCTRL_SLOW 
+				| AM33XX_PULL_UP | AM33XX_INPUT_EN},
+	{"spi0_d0.i2c2_scl",   OMAP_MUX_MODE2 | AM33XX_SLEWCTRL_SLOW
+ 				| AM33XX_PULL_UP | AM33XX_INPUT_EN},
 #else
 	{"uart1_ctsn.i2c2_sda",    OMAP_MUX_MODE3 | AM33XX_SLEWCTRL_SLOW |
 					AM33XX_PULL_UP | AM33XX_INPUT_EN},
@@ -738,6 +742,17 @@ static struct pinmux_config dcan_irtk2_pin_mux[]={
 	{"uart1_rtsn.d_can0_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
 };
 
+static struct pinmux_config uart45_pin_mux[]={
+	//uart4
+	{"uart0_ctsn.uart4_rxd", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLUP},
+	{"uart0_rtsn.uart4_txd", OMAP_MUX_MODE1 |AM33XX_PULL_ENBL},
+	
+	//uart5
+	{"lcd_data9.uart5_rxd", OMAP_MUX_MODE4 | AM33XX_PIN_INPUT_PULLUP},
+	{"lcd_data8.uart5_txd", OMAP_MUX_MODE4 |AM33XX_PULL_ENBL},
+	{NULL, 0},
+};
+
 
 /*
 * @pin_mux - single module pin-mux structure which defines pin-mux
@@ -769,6 +784,13 @@ static void dcan_init(int evm_id, int profile)
 	setup_pin_mux(dcan_irtk2_pin_mux);
 	/* Instance zero */
 	am33xx_d_can_init(0);
+}
+
+static void uart45_init(int evm_id, int profile)
+{
+	(void)evm_id;
+	(void)profile;
+	setup_pin_mux(uart45_pin_mux);
 }
 
 /* Matrix GPIO Keypad Support for profile-0 only: TODO */
@@ -978,27 +1000,47 @@ struct wl12xx_platform_data am335xevm_wlan_data = {
 
 /* Module pin mux for wlan and bluetooth */
 static struct pinmux_config mmc2_wl12xx_pin_mux[] = {
+#ifdef IRTK2_ZHD //for irtk2
+	{"gpmc_ad12.mmc2_dat0", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_ad13.mmc2_dat1", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_ad14.mmc2_dat2", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_ad15.mmc2_dat3", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_csn3.mmc2_cmd", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_clk.mmc2_clk", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},
+#else
 	{"gpmc_a1.mmc2_dat0", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},
 	{"gpmc_a2.mmc2_dat1", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},
 	{"gpmc_a3.mmc2_dat2", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},
 	{"gpmc_ben1.mmc2_dat3", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},
 	{"gpmc_csn3.mmc2_cmd", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},
 	{"gpmc_clk.mmc2_clk", OMAP_MUX_MODE3 | AM33XX_PIN_INPUT_PULLUP},
+#endif
 	{NULL, 0},
 };
 
 static struct pinmux_config uart1_wl12xx_pin_mux[] = {
+#ifndef IRTK2_ZHD
 	{"uart1_ctsn.uart1_ctsn", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"uart1_rtsn.uart1_rtsn", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT},
+#endif
 	{"uart1_rxd.uart1_rxd", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{"uart1_txd.uart1_txd", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL},
 	{NULL, 0},
 };
 
 static struct pinmux_config wl12xx_pin_mux[] = {
+#ifdef IRTK2_ZHD //for irtk2
+
+	{"gpmc_ad10.gpio0_26", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad11.gpio0_27", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
+	{"gpmc_ad9.gpio0_23", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT_PULLUP},
+
+#else	
+
 	{"gpmc_a0.gpio1_16", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
 	{"mcasp0_ahclkr.gpio3_17", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
 	{"mcasp0_ahclkx.gpio3_21", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT_PULLUP},
+#endif
 	{NULL, 0},
  };
 
@@ -1625,12 +1667,14 @@ static struct i2c_board_info am335x_i2c1_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("tlv320aic3x", 0x1b),
 	},
+#ifndef IRTK2_ZHD
 	{
 		I2C_BOARD_INFO("tsl2550", 0x39),
 	},
 	{
 		I2C_BOARD_INFO("tmp275", 0x48),
 	},
+#endif
 };
 
 static void i2c1_init(int evm_id, int profile)
@@ -1644,7 +1688,7 @@ static void i2c1_init(int evm_id, int profile)
 
 static struct i2c_board_info am335x_i2c2_boardinfo[] = {	
 	{
-		I2C_BOARD_INFO("tmp275", 0x48),
+		I2C_BOARD_INFO("mma8450", 0x1c),
 	},
 };
 
@@ -1715,13 +1759,14 @@ static void mmc2_wl12xx_init(int evm_id, int profile)
 {
 	setup_pin_mux(mmc2_wl12xx_pin_mux);
 
-	am335x_mmc[1].mmc = 3;
-	am335x_mmc[1].name = "wl1271";
-	am335x_mmc[1].caps = MMC_CAP_4_BIT_DATA | MMC_CAP_POWER_OFF_CARD;
-	am335x_mmc[1].nonremovable = true;
-	am335x_mmc[1].gpio_cd = -EINVAL;
-	am335x_mmc[1].gpio_wp = -EINVAL;
-	am335x_mmc[1].ocr_mask = MMC_VDD_32_33 | MMC_VDD_33_34; /* 3V3 */
+	am335x_mmc[2].mmc = 3;
+	am335x_mmc[2].name = "wl1271";
+	am335x_mmc[2].caps = MMC_CAP_4_BIT_DATA | MMC_CAP_POWER_OFF_CARD;
+	am335x_mmc[2].nonremovable = true;
+	//am335x_mmc[2].pm_caps = MMC_PM_KEEP_POWER;
+	am335x_mmc[2].gpio_cd = -EINVAL;
+	am335x_mmc[2].gpio_wp = -EINVAL;
+	am335x_mmc[2].ocr_mask = MMC_VDD_32_33 | MMC_VDD_33_34; /* 3V3 */
 
 	/* mmc will be initialized when mmc0_init is called */
 	return;
@@ -2062,19 +2107,22 @@ static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
 	{bootup_enb_pin_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-	{rgmii1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-	{i2c1_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
+	//{rgmii1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{i2c2_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
-	{mcasp1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{i2c1_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
+	//{mcasp1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mmc1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-	//{mmc2_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{mmc2_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mmc0_no_cd_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-	//{wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{dcan_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{uart2_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{uart3_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{uart1_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},//for irtk2, uart1 only
+	{uart45_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+
 	{NULL, 0, 0},
-#endif
+#else
 	{enable_ecap0,	DEV_ON_DGHTR_BRD, (PROFILE_0 | PROFILE_1 |
 						PROFILE_2 | PROFILE_7) },
 	{lcdc_init,	DEV_ON_DGHTR_BRD, (PROFILE_0 | PROFILE_1 |
@@ -2106,6 +2154,7 @@ static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
 	{uart2_init,	DEV_ON_DGHTR_BRD, PROFILE_3},
 	{haptics_init,	DEV_ON_DGHTR_BRD, (PROFILE_4)},
 	{NULL, 0, 0},
+#endif
 };
 
 /* Industrial Auto Motor Control EVM */
@@ -2449,29 +2498,35 @@ static struct tps65910_board am335x_tps65910_info = {
 *	   eeprom probe is called last.
 */
 static struct i2c_board_info __initdata am335x_i2c0_boardinfo[] = {
+#ifndef IRTK2_ZHD
 	{
 		/* Daughter Board EEPROM */
 		I2C_BOARD_INFO("24c256", DAUG_BOARD_I2C_ADDR),
 		.platform_data  = &am335x_daughter_board_eeprom_info,
 	},
+#endif
 	{
 		/* Baseboard board EEPROM */
 		I2C_BOARD_INFO("24c256", BASEBOARD_I2C_ADDR),
 		.platform_data  = &am335x_baseboard_eeprom_info,
 	},
+#ifndef IRTK2_ZHD
 	{
 		I2C_BOARD_INFO("cpld_reg", 0x35),
 	},
 	{
 		I2C_BOARD_INFO("tlc59108", 0x40),
 	},
+#endif
 	{
 		I2C_BOARD_INFO("tps65910", TPS65910_I2C_ID1),
 		.platform_data  = &am335x_tps65910_info,
 	},
+#ifndef IRTK2_ZHD
 	{
 		I2C_BOARD_INFO("tlv320aic3x", 0x1b),
 	},
+#endif
 };
 
 static struct omap_musb_board_data musb_board_data = {
