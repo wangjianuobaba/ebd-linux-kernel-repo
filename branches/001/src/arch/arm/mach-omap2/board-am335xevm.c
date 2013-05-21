@@ -732,7 +732,7 @@ static struct pinmux_config gpio_ddr_vtt_enb_pin_mux[] = {
 static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
 	{"lcd_hsync.gpio2_23", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},//system power enable
 	{"lcd_pclk.gpio2_24", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},//ddr3 power enable
-	{"gpio0_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},//uart select 
+	{"mii1_txd2.gpio0_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},//uart select 
 	{"lcd_data11.gpio2_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led and misc power enbale
 	{NULL, 0},
 };
@@ -988,14 +988,23 @@ static struct pinmux_config ecap2_pin_mux[] = {
 };
 
 #define AM335XEVM_WLAN_PMENA_GPIO	GPIO_TO_PIN(1, 30)
+#ifdef ITRK2_ZHD
+#define AM335XEVM_WLAN_IRQ_GPIO		GPIO_TO_PIN(0, 27)
+#else
 #define AM335XEVM_WLAN_IRQ_GPIO		GPIO_TO_PIN(3, 17)
+#endif
 #define AM335XEVM_SK_WLAN_IRQ_GPIO      GPIO_TO_PIN(0, 31)
 
 struct wl12xx_platform_data am335xevm_wlan_data = {
 	.irq = OMAP_GPIO_IRQ(AM335XEVM_WLAN_IRQ_GPIO),
 	.board_ref_clock = WL12XX_REFCLOCK_38_XTAL, /* 38.4Mhz */
+#ifdef IRTK2_ZHD //for irtk2
+	.bt_enable_gpio = GPIO_TO_PIN(0, 26),
+	.wlan_enable_gpio = GPIO_TO_PIN(0, 23),
+#else
 	.bt_enable_gpio = GPIO_TO_PIN(3, 21),
 	.wlan_enable_gpio = GPIO_TO_PIN(1, 16),
+#endif
 };
 
 /* Module pin mux for wlan and bluetooth */
@@ -1019,10 +1028,10 @@ static struct pinmux_config mmc2_wl12xx_pin_mux[] = {
 };
 
 static struct pinmux_config uart1_wl12xx_pin_mux[] = {
-#ifndef IRTK2_ZHD
+#ifndef IRTK2_ZHD 
 	{"uart1_ctsn.uart1_ctsn", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"uart1_rtsn.uart1_rtsn", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT},
-#endif
+#endif //for irtk2
 	{"uart1_rxd.uart1_rxd", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{"uart1_txd.uart1_txd", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL},
 	{NULL, 0},
@@ -1758,7 +1767,7 @@ static void mmc1_wl12xx_init(int evm_id, int profile)
 static void mmc2_wl12xx_init(int evm_id, int profile)
 {
 	setup_pin_mux(mmc2_wl12xx_pin_mux);
-
+#ifdef IRTK2_ZHD
 	am335x_mmc[2].mmc = 3;
 	am335x_mmc[2].name = "wl1271";
 	am335x_mmc[2].caps = MMC_CAP_4_BIT_DATA | MMC_CAP_POWER_OFF_CARD;
@@ -1767,7 +1776,16 @@ static void mmc2_wl12xx_init(int evm_id, int profile)
 	am335x_mmc[2].gpio_cd = -EINVAL;
 	am335x_mmc[2].gpio_wp = -EINVAL;
 	am335x_mmc[2].ocr_mask = MMC_VDD_32_33 | MMC_VDD_33_34; /* 3V3 */
+#else
 
+	am335x_mmc[1].mmc = 3;
+	am335x_mmc[1].name = "wl1271";
+	am335x_mmc[1].caps = MMC_CAP_4_BIT_DATA | MMC_CAP_POWER_OFF_CARD;
+	am335x_mmc[1].nonremovable = true;
+	am335x_mmc[1].gpio_cd = -EINVAL;
+	am335x_mmc[1].gpio_wp = -EINVAL;
+	am335x_mmc[1].ocr_mask = MMC_VDD_32_33 | MMC_VDD_33_34; /* 3V3 */
+#endif
 	/* mmc will be initialized when mmc0_init is called */
 	return;
 }
@@ -1842,8 +1860,11 @@ static void wl12xx_init(int evm_id, int profile)
 
 	if (wl12xx_set_platform_data(&am335xevm_wlan_data))
 		pr_err("error setting wl12xx data\n");
-
+#ifdef IRTK2_ZHD
+	dev = am335x_mmc[2].dev;
+#else
 	dev = am335x_mmc[1].dev;
+#endif
 	if (!dev) {
 		pr_err("wl12xx mmc device initialization failed\n");
 		goto out;
