@@ -634,7 +634,11 @@ static struct pinmux_config mmc0_wp_only_pin_mux[] = {
 };
 
 static struct pinmux_config mmc0_cd_only_pin_mux[] = {
+#ifdef	IRTK2_ZHD
+	{"mii1_rxd0.gpio2_21",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+#else
 	{"spi0_cs1.gpio0_6",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+#endif
 	{NULL, 0},
 };
 
@@ -737,28 +741,30 @@ static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
 	{"lcd_data13.gpio0_9", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//accelerometer power enable
 	{"lcd_data15.gpio0_11", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//wifi module power enable
 	{"lcd_data14.gpio0_10", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//ethernet power enable
-	{"lcd_data12.gpio0_8", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//gps module power enable
+	
+
 	//control panel
 	{"gpmc_wen.gpio2_4", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},		//power button
 	{"gpmc_advn_ale.gpio2_2", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},	//fun_1 button
 	{"gpmc_oen_ren.gpio2_3", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},	//fun_2 button
-
 	{"lcd_data0.gpio2_6", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led_gpv->gps
 	{"lcd_data1.gpio2_7", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led_data->gprs
 	{"lcd_data2.gpio2_8", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led_signal->gprs
 	{"lcd_data3.gpio2_9", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led_power->power
 	{"lcd_data4.gpio2_10", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led_5->power
 
+	//gprs
+	{"mii1_rxd1.gpio2_20", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//dcd
+	{"mii1_rxd2.gpio2_19", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//power enable
+	{"mii1_rxd3.gpio2_18", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//on
 
-//gprs cdc
-//gprs power enable
-//gprs on
+	{"mii1_rxclk.gpio3_10", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//audio power enable
 
-//audio power enable
-
-//gps reset
-//gps off
-//gps gpv
+	//gps 
+	{"lcd_data12.gpio0_8", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//gps module power enable
+	{"lcd_data5.gpio2_11", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//reset
+	{"lcd_data6.gpio2_12", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//off
+	{"lcd_data7.gpio2_13", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//gpv
 
 
 	{NULL, 0},
@@ -779,11 +785,8 @@ static struct pinmux_config uart45_pin_mux[]={
 	{"lcd_data8.uart5_txd", OMAP_MUX_MODE4 |AM33XX_PULL_ENBL},
 	{NULL, 0},
 };
-/*
-	{"gpmc_wen.gpio2_4", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},		//power button
-	{"gpmc_advn_ale.gpio2_2", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},	//fun_1 button
-	{"gpmc_oen_ren.gpio2_3", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},	//fun_2 button
-*/
+
+//control panel buttons
 static struct gpio_keys_button irtk2_gpio_buttons[]=
 {
 	{
@@ -807,6 +810,8 @@ static struct gpio_keys_button irtk2_gpio_buttons[]=
 		.active_low = 1,
 		.debounce_interval = 20,
 	},
+//below, input signals from external module will fake as buttons
+//##fixme
 };
 
 static struct gpio_keys_platform_data irtk2_gpio_key_info=
@@ -824,26 +829,79 @@ static struct platform_device irtk2_gpio_keys=
 	},
 };
 
+//control panel leds
 static struct gpio_led irtk2_gpio_leds[] = {
 	{
-		.name			= "power_green",
+		.name			= "power_green_led",
 		.gpio			= GPIO_TO_PIN(2, 10),	/* D1_0 */
+		
 	},
 	{
-		.name			= "power_red",
+		.name			= "power_red_led",
 		.gpio			= GPIO_TO_PIN(2, 9),	/* D1_1 */
+		.default_state		= LEDS_GPIO_DEFSTATE_ON,
 	},
 	{
-		.name			= "gprs_data",
+		.name			= "gprs_data_led",
 		.gpio			= GPIO_TO_PIN(2, 7),	/* D2_0 */
 	},
 	{
-		.name			= "gprs_signal",
+		.name			= "gprs_signal_led",
 		.gpio			= GPIO_TO_PIN(2, 8),	/* D2_1 */
 	},
 	{
-		.name			= "gps_signal",
+		.name			= "gps_signal_led",
 		.gpio			= GPIO_TO_PIN(2, 6),	/* D3 */
+	},
+//below, control pins will fake as leds just for convience
+	{
+		.name			= "system-power",
+		.gpio			= GPIO_TO_PIN(2, 23),
+		.default_state		= LEDS_GPIO_DEFSTATE_ON,
+	},
+	{
+		.name			= "accelerometer-power",
+		.gpio			= GPIO_TO_PIN(0, 9),
+		.default_state		= LEDS_GPIO_DEFSTATE_ON,
+	},
+	{
+		.name			= "wifi-power",
+		.gpio			= GPIO_TO_PIN(0, 11),
+		.default_state		= LEDS_GPIO_DEFSTATE_ON,
+	},
+	{
+		.name			= "gps-power",
+		.gpio			= GPIO_TO_PIN(0, 8),
+	},
+	{
+		.name			= "gps-off",
+		.gpio			= GPIO_TO_PIN(2, 12),	
+	},
+	{
+		.name			= "gps-reset",
+		.gpio			= GPIO_TO_PIN(2, 11),	
+	},
+	{
+		.name			= "gprs-power-enable",
+		.gpio			= GPIO_TO_PIN(2, 19),
+	},
+	{
+		.name			= "gprs-on",
+		.gpio			= GPIO_TO_PIN(2, 18),	
+	},
+	{
+		.name			= "audio-power",
+		.gpio			= GPIO_TO_PIN(3, 10),
+		.default_state		= LEDS_GPIO_DEFSTATE_ON,
+	},
+	{
+		.name			= "eth-power",
+		.gpio			= GPIO_TO_PIN(0, 10),
+		.default_state		= LEDS_GPIO_DEFSTATE_ON,
+	},
+	{
+		.name			= "uart0-select",
+		.gpio			= GPIO_TO_PIN(0, 17),	
 	},
 };
 
@@ -870,6 +928,8 @@ static void irtk2_gpio_led_init(int evm_id, int profile)
 	if (err)
 		pr_err("failed to register gpio led device\n");
 }
+
+
 
 /*
 * @pin_mux - single module pin-mux structure which defines pin-mux
@@ -2040,6 +2100,10 @@ static void d_can_init(int evm_id, int profile)
 
 static void mmc0_init(int evm_id, int profile)
 {
+#ifdef	IRTK2_ZHD
+	setup_pin_mux(mmc0_common_pin_mux);
+	setup_pin_mux(mmc0_cd_only_pin_mux);
+#else
 	switch (evm_id) {
 	case BEAGLE_BONE_A3:
 	case BEAGLE_BONE_OLD:
@@ -2053,7 +2117,7 @@ static void mmc0_init(int evm_id, int profile)
 		setup_pin_mux(mmc0_wp_only_pin_mux);
 		break;
 	}
-
+#endif
 	omap2_hsmmc_init(am335x_mmc);
 	return;
 }
@@ -2254,6 +2318,7 @@ static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
 #ifdef IRTK2_ZHD
 	{irtk2_gpio_keys_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{irtk2_gpio_led_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	//{irtk2_ctrl_pins_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	//{rgmii1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
@@ -2262,7 +2327,7 @@ static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
 	//{mcasp1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mmc1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mmc2_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-	{mmc0_no_cd_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{mmc0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{dcan_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{uart2_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
