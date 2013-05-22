@@ -730,10 +730,37 @@ static struct pinmux_config gpio_ddr_vtt_enb_pin_mux[] = {
 //pin, added by ebd-bo
 //see mux33xx.c for details
 static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
-	{"lcd_hsync.gpio2_23", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},//system power enable
-	{"lcd_pclk.gpio2_24", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},//ddr3 power enable
-	{"mii1_txd2.gpio0_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},//uart select 
-	{"lcd_data11.gpio2_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led and misc power enbale
+	{"lcd_hsync.gpio2_23", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//system power enable
+	{"lcd_pclk.gpio2_24", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//ddr3 power enable
+	{"mii1_txd2.gpio0_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//uart mux
+	{"lcd_data11.gpio2_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led and misc power enable
+	{"lcd_data13.gpio0_9", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//accelerometer power enable
+	{"lcd_data15.gpio0_11", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//wifi module power enable
+	{"lcd_data14.gpio0_10", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//ethernet power enable
+	{"lcd_data12.gpio0_8", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//gps module power enable
+	//control panel
+	{"gpmc_wen.gpio2_4", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},		//power button
+	{"gpmc_advn_ale.gpio2_2", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},	//fun_1 button
+	{"gpmc_oen_ren.gpio2_3", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},	//fun_2 button
+
+	{"lcd_data0.gpio2_6", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led_gpv->gps
+	{"lcd_data1.gpio2_7", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led_data->gprs
+	{"lcd_data2.gpio2_8", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led_signal->gprs
+	{"lcd_data3.gpio2_9", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led_power->power
+	{"lcd_data4.gpio2_10", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led_5->power
+
+
+//gprs cdc
+//gprs power enable
+//gprs on
+
+//audio power enable
+
+//gps reset
+//gps off
+//gps gpv
+
+
 	{NULL, 0},
 };
 
@@ -752,7 +779,97 @@ static struct pinmux_config uart45_pin_mux[]={
 	{"lcd_data8.uart5_txd", OMAP_MUX_MODE4 |AM33XX_PULL_ENBL},
 	{NULL, 0},
 };
+/*
+	{"gpmc_wen.gpio2_4", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},		//power button
+	{"gpmc_advn_ale.gpio2_2", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},	//fun_1 button
+	{"gpmc_oen_ren.gpio2_3", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},	//fun_2 button
+*/
+static struct gpio_keys_button irtk2_gpio_buttons[]=
+{
+	{
+		.code	= BTN_0,
+		.gpio	= GPIO_TO_PIN(2,4),
+		.desc	= "panel_power",
+		.active_low = 1,
+		.debounce_interval = 20,
+	},
+	{
+		.code	= BTN_1,
+		.gpio	= GPIO_TO_PIN(2,3),
+		.desc	= "fun_2",
+		.active_low = 1,
+		.debounce_interval = 20,
+	},
+	{
+		.code	= BTN_2,
+		.gpio	= GPIO_TO_PIN(2,2),
+		.desc	= "fun_1",
+		.active_low = 1,
+		.debounce_interval = 20,
+	},
+};
 
+static struct gpio_keys_platform_data irtk2_gpio_key_info=
+{
+	.buttons	= irtk2_gpio_buttons,
+	.nbuttons	= ARRAY_SIZE(irtk2_gpio_buttons),
+};
+
+static struct platform_device irtk2_gpio_keys=
+{
+	.name	= "gpio-keys",//don't change the name
+	.id	= -1,
+	.dev	= {
+		.platform_data = &irtk2_gpio_key_info,
+	},
+};
+
+static struct gpio_led irtk2_gpio_leds[] = {
+	{
+		.name			= "power_green",
+		.gpio			= GPIO_TO_PIN(2, 10),	/* D1_0 */
+	},
+	{
+		.name			= "power_red",
+		.gpio			= GPIO_TO_PIN(2, 9),	/* D1_1 */
+	},
+	{
+		.name			= "gprs_data",
+		.gpio			= GPIO_TO_PIN(2, 7),	/* D2_0 */
+	},
+	{
+		.name			= "gprs_signal",
+		.gpio			= GPIO_TO_PIN(2, 8),	/* D2_1 */
+	},
+	{
+		.name			= "gps_signal",
+		.gpio			= GPIO_TO_PIN(2, 6),	/* D3 */
+	},
+};
+
+static struct gpio_led_platform_data irtk2_gpio_led_info = {
+	.leds		= irtk2_gpio_leds,
+	.num_leds	= ARRAY_SIZE(irtk2_gpio_leds),
+};
+
+static struct platform_device irtk2_leds_gpio = {
+	.name	= "leds-gpio",
+	.id	= -1,
+	.dev	= {
+		.platform_data	= &irtk2_gpio_led_info,
+	},
+};
+
+static void irtk2_gpio_led_init(int evm_id, int profile)
+{
+	int err;
+
+	//need not to setup pins, we have done that in bootup enable
+	//setup_pin_mux(irtk2_gpio_led_mux);
+	err = platform_device_register(&irtk2_leds_gpio);
+	if (err)
+		pr_err("failed to register gpio led device\n");
+}
 
 /*
 * @pin_mux - single module pin-mux structure which defines pin-mux
@@ -791,6 +908,16 @@ static void uart45_init(int evm_id, int profile)
 	(void)evm_id;
 	(void)profile;
 	setup_pin_mux(uart45_pin_mux);
+}
+
+//irtk2 gpio
+static void irtk2_gpio_keys_init(int evm_id, int profile)
+{
+	int err;
+	bootup_enb_pin_init(0,0);
+	err = platform_device_register(&irtk2_gpio_keys);
+	if(err)
+		pr_err("failed to register gpio key device.\n");
 }
 
 /* Matrix GPIO Keypad Support for profile-0 only: TODO */
@@ -1884,7 +2011,7 @@ static void wl12xx_init(int evm_id, int profile)
 	}
 
 
-	pdata->slots[0].set_power = wl12xx_set_power;
+	pdata->slots[0].set_power = wl12xx_set_power; 	//we don't care which slot!
 out:
 	return;
 }
@@ -2125,7 +2252,8 @@ static void profibus_init(int evm_id, int profile)
 /* General Purpose EVM */
 static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
 #ifdef IRTK2_ZHD
-	{bootup_enb_pin_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{irtk2_gpio_keys_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{irtk2_gpio_led_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	//{rgmii1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},

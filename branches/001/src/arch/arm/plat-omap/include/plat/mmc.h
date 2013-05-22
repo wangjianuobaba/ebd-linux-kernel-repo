@@ -28,11 +28,7 @@
 #define OMAP2_MMC1_BASE		0x4809c000
 
 #define OMAP4_MMC_REG_OFFSET	0x100
-#ifdef IRTK2_ZHD// for irtk2
 #define OMAP_MMC_MAX_SLOTS	2
-#else
-#define OMAP_MMC_MAX_SLOTS	2
-#endif
 
 /*
  * struct omap_mmc_dev_attr.flags possibilities
