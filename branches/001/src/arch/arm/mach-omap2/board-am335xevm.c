@@ -766,7 +766,18 @@ static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
 	{"lcd_data6.gpio2_12", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//off
 	{"lcd_data7.gpio2_13", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//gpv
 
+	{"gpmc_ben0_cle.gpio2_5", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//attiny reset,out
 
+	{"gpmc_ben1.gpio1_28", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//battery charge,in
+	{"gpmc_wait0.gpio0_30", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//battery fault,in
+
+	{"gpmc_wpn.gpio0_31", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//ltc4412 wall_in
+	{"lcd_vsync.gpio2_22", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//ltc2955 pcl_int,in
+	{"mcasp0_aclkr.gpio3_18", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//L8 insert detect,in
+
+	//radio
+	{"mcasp0_axr1.gpio3_20", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//rm_en,out
+	{"mcasp0_fsr.gpio3_19", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//rm_state
 	{NULL, 0},
 };
 
@@ -811,7 +822,36 @@ static struct gpio_keys_button irtk2_gpio_buttons[]=
 		.debounce_interval = 20,
 	},
 //below, input signals from external module will fake as buttons
-//##fixme
+	{
+		.code	= BTN_A,
+		.gpio	= GPIO_TO_PIN(2,20),
+		.desc	= "gprs-dcd",
+	},
+	{
+		.code	= BTN_B,
+		.gpio	= GPIO_TO_PIN(2,13),
+		.desc	= "gps-gpv",
+	},
+	{
+		.code	= BTN_C,
+		.gpio	= GPIO_TO_PIN(1,28),
+		.desc	= "bt-chg",
+	},
+	{
+		.code	= BTN_X,
+		.gpio	= GPIO_TO_PIN(0,30),
+		.desc	= "bt-flt",
+	},
+	{
+		.code	= BTN_Z,
+		.gpio	= GPIO_TO_PIN(3,18),
+		.desc	= "L8-det",
+	},
+	{
+		.code	= BTN_TL,
+		.gpio	= GPIO_TO_PIN(3,19),
+		.desc	= "rf-st",
+	},
 };
 
 static struct gpio_keys_platform_data irtk2_gpio_key_info=
@@ -902,6 +942,14 @@ static struct gpio_led irtk2_gpio_leds[] = {
 	{
 		.name			= "uart0-select",
 		.gpio			= GPIO_TO_PIN(0, 17),	
+	},
+	{
+		.name			= "radio-power",
+		.gpio			= GPIO_TO_PIN(3, 20),	
+	},
+	{
+		.name			= "encrypt-chip",
+		.gpio			= GPIO_TO_PIN(2, 5),
 	},
 };
 
