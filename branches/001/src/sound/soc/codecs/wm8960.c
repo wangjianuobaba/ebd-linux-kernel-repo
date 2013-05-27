@@ -7,7 +7,7 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-
+#define DEBUG
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/init.h>
@@ -207,8 +207,13 @@ SOC_SINGLE("ALC Attack", WM8960_ALC3, 0, 15, 0),
 SOC_SINGLE("Noise Gate Threshold", WM8960_NOISEG, 3, 31, 0),
 SOC_SINGLE("Noise Gate Switch", WM8960_NOISEG, 0, 1, 0),
 
+#ifdef IRTK2_ZHD
+SOC_DOUBLE_R_TLV("ADC PCM Capture Volume", WM8960_LINPATH, WM8960_RINPATH,
+	4, 3, 0, input_pag_tlv),
+#else
 SOC_DOUBLE_R("ADC PCM Capture Volume", WM8960_LINPATH, WM8960_RINPATH,
 	0, 127, 0),
+#endif
 
 SOC_SINGLE_TLV("Left Output Mixer Boost Bypass Volume",
 	       WM8960_BYPASS1, 4, 7, 1, bypass_tlv),
@@ -277,8 +282,13 @@ SND_SOC_DAPM_MIXER("Left Input Mixer", WM8960_POWER3, 5, 0,
 SND_SOC_DAPM_MIXER("Right Input Mixer", WM8960_POWER3, 4, 0,
 		   wm8960_rin, ARRAY_SIZE(wm8960_rin)),
 
+#ifdef IRTK2_ZHD
+SND_SOC_DAPM_ADC("Left ADC", "Capture", WM8960_POWER1, 3, 0),
+SND_SOC_DAPM_ADC("Right ADC", "Capture", WM8960_POWER1, 2, 0),
+#else
 SND_SOC_DAPM_ADC("Left ADC", "Capture", WM8960_POWER2, 3, 0),
 SND_SOC_DAPM_ADC("Right ADC", "Capture", WM8960_POWER2, 2, 0),
+#endif
 
 SND_SOC_DAPM_DAC("Left DAC", "Playback", WM8960_POWER2, 8, 0),
 SND_SOC_DAPM_DAC("Right DAC", "Playback", WM8960_POWER2, 7, 0),
@@ -767,7 +777,7 @@ static int pll_factors(unsigned int source, unsigned int target,
 	K /= 10;
 
 	pll_div->k = K;
-
+	
 	pr_debug("WM8960 PLL: N=%x K=%x pre_div=%d\n",
 		 pll_div->n, pll_div->k, pll_div->pre_div);
 
@@ -781,6 +791,8 @@ static int wm8960_set_dai_pll(struct snd_soc_dai *codec_dai, int pll_id,
 	u16 reg;
 	static struct _pll_div pll_div;
 	int ret;
+
+	pr_debug(">>>>%s:freq_in=%d, freq_out=%d.\n", __func__, freq_in, freq_out);
 
 	if (freq_in && freq_out) {
 		ret = pll_factors(freq_in, freq_out, &pll_div);
@@ -917,7 +929,7 @@ static int wm8960_probe(struct snd_soc_codec *codec)
 	struct wm8960_data *pdata = dev_get_platdata(codec->dev);
 	int ret;
 	u16 reg;
-
+	pr_debug(">>>>>%s:%s().\n", __FILE__, __func__);
 	wm8960->set_bias_level = wm8960_set_bias_level_out3;
 
 	if (!pdata) {
@@ -967,6 +979,17 @@ static int wm8960_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, WM8960_LOUT2, reg | 0x100);
 	reg = snd_soc_read(codec, WM8960_ROUT2);
 	snd_soc_write(codec, WM8960_ROUT2, reg | 0x100);
+
+snd_soc_update_bits(codec, WM8960_POWER2, ~0, 0x1FA);// Enable DACL, DACR, LOUT1, ROUT1, SPKL, SPKR and OUT3 
+snd_soc_update_bits(codec,WM8960_POWER3, ~0, 0x00C);//  Enable left output mixer and right output mixer 
+snd_soc_update_bits(codec,WM8960_CLASSD1, ~0, 0x0F7);// Left and Right Speakers Enabled 
+snd_soc_update_bits(codec,WM8960_ROUTMIX, ~0, 0x150);// Right DAC to right output mixer enabled (RD2RO)
+snd_soc_update_bits(codec,WM8960_LOUTMIX, ~0, 0x150);// Left DAC to left output mixer enabled (LD2LO)
+snd_soc_update_bits(codec,WM8960_LOUT2, ~0, 0x17f);// LSPK Vol = 0dB, volume update enabled 
+snd_soc_update_bits(codec,WM8960_ROUT2, ~0, 0x17f);// RSPK Vol = 0dB, volume update enabled
+snd_soc_update_bits(codec,WM8960_LOUT1, ~0, 0x169);// LOUT1 Vol = 0dB, volume update enabled  
+snd_soc_update_bits(codec,WM8960_ROUT1, ~0, 0x169);// ROUT1 Vol = 0dB, volume update enabled   
+snd_soc_update_bits(codec,WM8960_DACCTL1, ~0, 0x000);// Unmute DAC digital soft mute
 
 	snd_soc_add_controls(codec, wm8960_snd_controls,
 				     ARRAY_SIZE(wm8960_snd_controls));

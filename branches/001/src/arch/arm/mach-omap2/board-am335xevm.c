@@ -156,25 +156,6 @@ static struct tsc_data am335x_touchscreen_data  = {
 	.x_plate_resistance = 200,
 };
 
-static u8 am335x_iis_serializer_direction1[] = {
-	INACTIVE_MODE,	INACTIVE_MODE,	TX_MODE,	RX_MODE,
-	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
-	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
-	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
-};
-
-static struct snd_platform_data am335x_evm_snd_data1 = {
-	.tx_dma_offset	= 0x46400000,	/* McASP1 */
-	.rx_dma_offset	= 0x46400000,
-	.op_mode	= DAVINCI_MCASP_IIS_MODE,
-	.num_serializer	= ARRAY_SIZE(am335x_iis_serializer_direction1),
-	.tdm_slots	= 2,
-	.serial_dir	= am335x_iis_serializer_direction1,
-	.asp_chan_q	= EVENTQ_2,
-	.version	= MCASP_VERSION_3,
-	.txnumevt	= 1,
-	.rxnumevt	= 1,
-};
 
 static u8 am335x_evm_sk_iis_serializer_direction1[] = {
 	INACTIVE_MODE,	INACTIVE_MODE,	TX_MODE,	INACTIVE_MODE,
@@ -200,7 +181,7 @@ static struct omap2_hsmmc_info am335x_mmc[] __initdata = {
 		.mmc            = 1,
 		.caps           = MMC_CAP_4_BIT_DATA,
 #ifdef IRTK2_ZHD
-		.gpio_cd        = -EINVAL,
+		.gpio_cd        = GPIO_TO_PIN(2, 21),
 		.gpio_wp        = -EINVAL,
 #else
 		.gpio_cd        = GPIO_TO_PIN(0, 6),
@@ -605,14 +586,41 @@ static struct pinmux_config i2c2_pin_mux[] = {
 	{NULL, 0},
 };
 
+static u8 am335x_iis_serializer_direction1[] = {
+	INACTIVE_MODE,	INACTIVE_MODE,	RX_MODE,	TX_MODE,	
+	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
+	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
+	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
+};
+
+static struct snd_platform_data am335x_evm_snd_data1 = {
+	.tx_dma_offset	= 0x46400000,	/* McASP1 */
+	.rx_dma_offset	= 0x46400000,
+	.op_mode	= DAVINCI_MCASP_IIS_MODE,
+	.num_serializer	= ARRAY_SIZE(am335x_iis_serializer_direction1),
+	.tdm_slots	= 2,
+	.serial_dir	= am335x_iis_serializer_direction1,
+	.asp_chan_q	= EVENTQ_2,
+	.version	= MCASP_VERSION_3,
+	.txnumevt	= 1,
+	.rxnumevt	= 1,
+};
+
 
 /* Module pin mux for mcasp1 */
 static struct pinmux_config mcasp1_pin_mux[] = {
+
+#ifdef IRTK2_ZHD
+	{"mii1_rxdv.mcasp1_aclkx", OMAP_MUX_MODE4 | AM33XX_PIN_INPUT_PULLDOWN},//bclk
+	{"mii1_txd3.mcasp1_fsx", OMAP_MUX_MODE4 | AM33XX_PIN_INPUT_PULLDOWN},//fsk
+#else
 	{"mii1_crs.mcasp1_aclkx", OMAP_MUX_MODE4 | AM33XX_PIN_INPUT_PULLDOWN},
 	{"mii1_rxerr.mcasp1_fsx", OMAP_MUX_MODE4 | AM33XX_PIN_INPUT_PULLDOWN},
-	{"mii1_col.mcasp1_axr2", OMAP_MUX_MODE4 | AM33XX_PIN_INPUT_PULLDOWN},
+	
+#endif
+	{"mii1_col.mcasp1_axr2", OMAP_MUX_MODE4 | AM33XX_PIN_INPUT_PULLDOWN},//data in
 	{"rmii1_refclk.mcasp1_axr3", OMAP_MUX_MODE4 |
-						AM33XX_PIN_INPUT_PULLDOWN},
+						AM33XX_PIN_INPUT_PULLDOWN},//data out
 	{NULL, 0},
 };
 
@@ -778,6 +786,8 @@ static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
 	//radio
 	{"mcasp0_axr1.gpio3_20", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//rm_en,out
 	{"mcasp0_fsr.gpio3_19", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//rm_state
+
+
 	{NULL, 0},
 };
 
@@ -1908,10 +1918,11 @@ static void lis331dlh_init(int evm_id, int profile)
 }
 
 static struct i2c_board_info am335x_i2c1_boardinfo[] = {
+#ifndef IRTK2_ZHD
 	{
 		I2C_BOARD_INFO("tlv320aic3x", 0x1b),
 	},
-#ifndef IRTK2_ZHD
+
 	{
 		I2C_BOARD_INFO("tsl2550", 0x39),
 	},
@@ -2366,13 +2377,12 @@ static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
 #ifdef IRTK2_ZHD
 	{irtk2_gpio_keys_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{irtk2_gpio_led_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-	//{irtk2_ctrl_pins_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	//{rgmii1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{i2c2_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
 	{i2c1_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
-	//{mcasp1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{mcasp1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mmc1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mmc2_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mmc0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
@@ -2784,6 +2794,9 @@ static struct i2c_board_info __initdata am335x_i2c0_boardinfo[] = {
 		I2C_BOARD_INFO("tps65910", TPS65910_I2C_ID1),
 		.platform_data  = &am335x_tps65910_info,
 	},
+	{
+		I2C_BOARD_INFO("wm8960", 0x1a),
+	},
 #ifndef IRTK2_ZHD
 	{
 		I2C_BOARD_INFO("tlv320aic3x", 0x1b),
@@ -2930,6 +2943,28 @@ static void __init clkout2_enable(void)
 	setup_pin_mux(clkout2_pin_mux);
 }
 
+//added by ebd-bo
+/* Enable clkout1 */
+static struct pinmux_config clkout1_pin_mux[] = {
+	{"xdma_event_intr0.clkout1", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},
+	{NULL, 0},
+};
+
+static void __init clkout1_enable(void)
+{
+	struct clk *ck_32;
+
+	ck_32 = clk_get(NULL, "clkout1_ck");
+	if (IS_ERR(ck_32)) {
+		pr_err("Cannot clk_get ck_32\n");
+		return;
+	}
+
+	clk_enable(ck_32);
+
+	setup_pin_mux(clkout1_pin_mux);
+}
+
 void __iomem *am33xx_emif_base;
 
 void __iomem * __init am33xx_get_mem_ctlr(void)
@@ -2999,6 +3034,9 @@ static void __init am335x_evm_init(void)
 	omap_serial_init();
 	am335x_rtc_init();
 	clkout2_enable();
+#ifdef IRTK2_ZHD
+	//clkout1_enable();
+#endif
 	am335x_evm_i2c_init();
 	omap_sdrc_init(NULL, NULL);
 	usb_musb_init(&musb_board_data);

@@ -8,7 +8,7 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-
+#define DEBUG
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/timer.h>
@@ -31,6 +31,10 @@
 #include "davinci-pcm.h"
 #include "davinci-i2s.h"
 #include "davinci-mcasp.h"
+
+#ifdef IRTK2_ZHD
+#include "../codecs/wm8960.h"
+#endif
 
 #define AUDIO_FORMAT (SND_SOC_DAIFMT_DSP_B | \
 		SND_SOC_DAIFMT_CBM_CFM | SND_SOC_DAIFMT_IB_NF)
@@ -65,8 +69,12 @@ static int evm_hw_params(struct snd_pcm_substream *substream,
 			sysclk = 24000000;
 		else
 #endif
-			sysclk = 12000000;
 
+#ifdef IRTK2_ZHD
+			sysclk = 22579200;
+#else
+			sysclk = 12000000;
+#endif
 	else
 		return -EINVAL;
 
@@ -79,12 +87,27 @@ static int evm_hw_params(struct snd_pcm_substream *substream,
 	ret = snd_soc_dai_set_fmt(cpu_dai, AUDIO_FORMAT);
 	if (ret < 0)
 		return ret;
+#ifdef IRTK2_ZHD
+#define IRTK2_ZHD_XTAL 24000000
+
+	ret = snd_soc_dai_set_pll(codec_dai, 0, 0, IRTK2_ZHD_XTAL, 12288000*2);//wm8960 accept 12.288MHz, 11.2896MHz
+	if(ret < 0){
+		return ret;
+	}
+
+	ret = snd_soc_dai_set_clkdiv(codec_dai, WM8960_SYSCLKDIV, WM8960_SYSCLK_DIV_2);//sysclk divided by 2
+	if(ret < 0){
+		return ret;
+	}
+
+
+#else
 
 	/* set the codec system clock */
 	ret = snd_soc_dai_set_sysclk(codec_dai, 0, sysclk, SND_SOC_CLOCK_OUT);
 	if (ret < 0)
 		return ret;
-
+#endif
 	return 0;
 }
 
@@ -106,6 +129,27 @@ static struct snd_soc_ops evm_spdif_ops = {
 	.hw_params = evm_spdif_hw_params,
 };
 
+#ifdef IRTK2_ZHD //for irtk2 wm8960
+static const struct snd_soc_dapm_widget wm8960_dapm_widgets[] = {
+    SND_SOC_DAPM_SPK("Ext Spk", NULL),
+    SND_SOC_DAPM_HP("HP", NULL),
+    SND_SOC_DAPM_MIC("Mic", NULL),
+};
+
+static const struct snd_soc_dapm_route wm8960_dapm_intercon[] = {
+    {"Ext Spk", NULL, "SPK_LP"},
+    {"Ext Spk", NULL, "SPK_LN"},
+
+    {"HP", NULL, "HP_L"},
+    {"HP", NULL, "HP_R"},
+
+    {"MICB", NULL, "Mic"},
+
+    {"LINPUT1", NULL, "MICB"},
+    //{"LINPUT2", NULL, "MICB"},
+};
+
+#endif
 /* davinci-evm machine dapm widgets */
 static const struct snd_soc_dapm_widget aic3x_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
@@ -142,6 +186,33 @@ static int evm_aic3x_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
+#ifdef IRTK2_ZHD
+	snd_soc_dapm_new_controls(dapm, wm8960_dapm_widgets,
+				  ARRAY_SIZE(wm8960_dapm_widgets));
+	snd_soc_dapm_add_routes(dapm, wm8960_dapm_intercon, ARRAY_SIZE(wm8960_dapm_intercon));
+
+	/* not connected */
+	snd_soc_dapm_nc_pin(dapm, "LINPUT3");
+	snd_soc_dapm_nc_pin(dapm, "LINPUT2");
+	snd_soc_dapm_nc_pin(dapm, "RINPUT3");
+	snd_soc_dapm_nc_pin(dapm, "RINPUT2");
+	snd_soc_dapm_nc_pin(dapm, "RINPUT1");
+    
+	snd_soc_dapm_nc_pin(dapm, "OUT3");
+	snd_soc_dapm_nc_pin(dapm, "SPK_RP");
+	snd_soc_dapm_nc_pin(dapm, "SPK_RN");
+
+	/* always connected */
+    	snd_soc_dapm_enable_pin(dapm, "Ext Spk");
+    	snd_soc_dapm_enable_pin(dapm, "Mic");
+
+	/* disable connected */
+	snd_soc_dapm_disable_pin(dapm, "HP");
+
+	snd_soc_dapm_sync(dapm);
+#endif
+
+#ifndef IRTK2_ZHD
 	/* Add davinci-evm specific widgets */
 	snd_soc_dapm_new_controls(dapm, aic3x_dapm_widgets,
 				  ARRAY_SIZE(aic3x_dapm_widgets));
@@ -159,7 +230,7 @@ static int evm_aic3x_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_enable_pin(dapm, "Line Out");
 	snd_soc_dapm_enable_pin(dapm, "Mic Jack");
 	snd_soc_dapm_enable_pin(dapm, "Line In");
-
+#endif
 	return 0;
 }
 
@@ -250,11 +321,18 @@ static struct snd_soc_dai_link da850_evm_dai = {
 };
 
 static struct snd_soc_dai_link am335x_evm_dai = {
+#ifdef IRTK2_ZHD
+	.name = "WM8960",
+	.stream_name = "WM8960",
+	.codec_dai_name = "wm8960-hifi",
+	.codec_name = "wm8960-codec.1-001a",
+#else
 	.name = "TLV320AIC3X",
 	.stream_name = "AIC3X",
-	.cpu_dai_name = "davinci-mcasp.1",
 	.codec_dai_name = "tlv320aic3x-hifi",
 	.codec_name = "tlv320aic3x-codec.2-001b",
+#endif
+	.cpu_dai_name = "davinci-mcasp.1",
 	.platform_name = "davinci-pcm-audio",
 	.init = evm_aic3x_init,
 	.ops = &evm_ops,

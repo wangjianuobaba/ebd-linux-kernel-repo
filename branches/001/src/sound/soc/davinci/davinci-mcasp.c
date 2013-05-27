@@ -14,7 +14,7 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-
+#define DEBUG
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/device.h>
@@ -22,7 +22,6 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/pm_runtime.h>
-
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -31,6 +30,8 @@
 
 #include "davinci-pcm.h"
 #include "davinci-mcasp.h"
+
+#define IRTK2_ZHD
 
 /*
  * McASP register definitions
@@ -356,7 +357,7 @@ static void mcasp_start_tx(struct davinci_audio_dev *dev)
 {
 	u8 offset = 0, i;
 	u32 cnt;
-
+	pr_debug(">>>>>%s:%s().\n", __FILE__, __func__);
 	mcasp_set_ctl_reg(dev->base + DAVINCI_MCASP_GBLCTLX_REG, TXHCLKRST);
 	mcasp_set_ctl_reg(dev->base + DAVINCI_MCASP_GBLCTLX_REG, TXCLKRST);
 	mcasp_set_ctl_reg(dev->base + DAVINCI_MCASP_GBLCTLX_REG, TXSERCLR);
@@ -377,7 +378,7 @@ static void mcasp_start_tx(struct davinci_audio_dev *dev)
 	while (!(mcasp_get_reg(dev->base + DAVINCI_MCASP_XRSRCTL_REG(offset)) &
 		 TXSTATE) && (cnt < 100000))
 		cnt++;
-
+	pr_debug(">>>>>%s(),tx ready.\n", __func__);
 	mcasp_set_reg(dev->base + DAVINCI_MCASP_TXBUF_REG, 0);
 }
 
@@ -458,7 +459,7 @@ static int davinci_mcasp_set_dai_fmt(struct snd_soc_dai *cpu_dai,
 {
 	struct davinci_audio_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
 	void __iomem *base = dev->base;
-
+	pr_debug(">>>>>%s:%s().\n", __FILE__, __func__);
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS:
 		/* codec is clock and frame slave */
@@ -467,10 +468,14 @@ static int davinci_mcasp_set_dai_fmt(struct snd_soc_dai *cpu_dai,
 
 		mcasp_set_bits(base + DAVINCI_MCASP_ACLKRCTL_REG, ACLKRE);
 		mcasp_set_bits(base + DAVINCI_MCASP_RXFMCTL_REG, AFSRE);
-
+#ifdef IRTK2_ZHD
+		mcasp_set_bits(base + DAVINCI_MCASP_PDIR_REG,
+				ACLKX | AFSX);
+#else
 		mcasp_set_bits(base + DAVINCI_MCASP_PDIR_REG,
 				ACLKX | AHCLKX | AFSX);
-		break;
+#endif	
+	break;
 	case SND_SOC_DAIFMT_CBM_CFS:
 		/* codec is clock master and frame slave */
 		mcasp_clr_bits(base + DAVINCI_MCASP_ACLKXCTL_REG, ACLKXE);
@@ -491,10 +496,14 @@ static int davinci_mcasp_set_dai_fmt(struct snd_soc_dai *cpu_dai,
 
 		mcasp_clr_bits(base + DAVINCI_MCASP_ACLKRCTL_REG, ACLKRE);
 		mcasp_clr_bits(base + DAVINCI_MCASP_RXFMCTL_REG, AFSRE);
-
+#ifdef IRTK2_ZHD //for irtk2, the mclk source isn't from ahclkx, don't waste time setting it
+		mcasp_clr_bits(base + DAVINCI_MCASP_PDIR_REG,
+				ACLKX | AFSX | ACLKR | AHCLKR | AFSR);
+#else
 		mcasp_clr_bits(base + DAVINCI_MCASP_PDIR_REG,
 				ACLKX | AHCLKX | AFSX | ACLKR | AHCLKR | AFSR);
-		break;
+#endif	
+	break;
 
 	default:
 		return -EINVAL;
@@ -729,6 +738,7 @@ static void davinci_hw_param(struct davinci_audio_dev *dev, int stream)
 /* S/PDIF */
 static void davinci_hw_dit_param(struct davinci_audio_dev *dev)
 {
+	pr_debug(">>>>>%s:%s().\n", __FILE__, __func__);
 	/* Set the PDIR for Serialiser as output */
 	mcasp_set_bits(dev->base + DAVINCI_MCASP_PDIR_REG, AFSX);
 
@@ -769,7 +779,7 @@ static int davinci_mcasp_hw_params(struct snd_pcm_substream *substream,
 					&dev->dma_params[substream->stream];
 	int word_length;
 	u8 fifo_level;
-
+	pr_debug(">>>>>%s:%s().\n", __FILE__, __func__);
 	davinci_hw_common_param(dev, substream->stream);
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		fifo_level = dev->txnumevt;
@@ -819,6 +829,7 @@ static int davinci_mcasp_hw_params(struct snd_pcm_substream *substream,
 static int davinci_mcasp_trigger(struct snd_pcm_substream *substream,
 				     int cmd, struct snd_soc_dai *cpu_dai)
 {
+	pr_debug(">>>>>%s:%s().\n", __FILE__, __func__);	
 	struct davinci_audio_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
 	int ret = 0;
 
@@ -970,7 +981,13 @@ static int davinci_mcasp_probe(struct platform_device *pdev)
 			goto err_release_clk;
 		}
 	}
-
+        
+#ifdef IRTK2_ZHD //for irtk2, the mclk source isn't from ahclkx, don't waste time setting it
+	/* add by ebd-bo */
+	pr_debug(">>>>>%s:%s().\n", __FILE__, __func__);
+	//mcasp_set_bits(dev->base + DAVINCI_MCASP_PDIR_REG, AHCLKX);
+        /* end add */
+#endif
 	dma_data = &dev->dma_params[SNDRV_PCM_STREAM_PLAYBACK];
 	dma_data->asp_chan_q = pdata->asp_chan_q;
 	dma_data->ram_chan_q = pdata->ram_chan_q;

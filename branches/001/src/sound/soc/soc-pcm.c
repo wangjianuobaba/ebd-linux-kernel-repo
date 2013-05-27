@@ -15,7 +15,7 @@
  *  option) any later version.
  *
  */
-
+#define DEBUG
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/delay.h>
