@@ -752,8 +752,6 @@ static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
 	{"lcd_data11.gpio2_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led and misc power enable
 	{"lcd_data13.gpio0_9", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//accelerometer power enable
 	{"lcd_data15.gpio0_11", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//wifi module power enable
-	{"lcd_data14.gpio0_10", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//ethernet power enable
-	
 
 	//control panel
 	{"gpmc_wen.gpio2_4", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},		//power button
@@ -791,8 +789,11 @@ static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
 	{"mcasp0_axr1.gpio3_20", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//rm_en,out
 	{"mcasp0_fsr.gpio3_19", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//rm_state
 
-	
 	{"lcd_ac_bias_en.gpio2_25", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//mma8452 interrupt
+
+	//lcd12864
+	//ethernet
+	{"lcd_data14.gpio0_10", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//ethernet power enable
 
 	{NULL, 0},
 };
@@ -2395,7 +2396,7 @@ static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
 	{irtk2_gpio_led_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-	//{rgmii1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{rgmii2_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{i2c2_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
 	{i2c1_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
 	{mcasp1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
