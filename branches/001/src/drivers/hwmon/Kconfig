@@ -1388,4 +1388,10 @@ config SENSORS_ATK0110
 
 endif # ACPI
 
+
+config MXC_MMA845X
+        	tristate " Freescale  MMA845X  Accelerometer sensor"
+       		depends on I2C && SYSFS
+        	default n
+
 endif # HWMON

@@ -61,7 +61,7 @@
 #include <plat/mmc.h>
 #include <plat/emif.h>
 #include <plat/nand.h>
-
+#include <linux/mma845x.h>//added by ebd-bo
 #include "board-flash.h"
 #include "cpuidle33xx.h"
 #include "mux.h"
@@ -587,7 +587,11 @@ static struct pinmux_config i2c2_pin_mux[] = {
 };
 
 static u8 am335x_iis_serializer_direction1[] = {
-	INACTIVE_MODE,	INACTIVE_MODE,	RX_MODE,	TX_MODE,	
+#ifdef IRTK2_ZHD
+	INACTIVE_MODE,	INACTIVE_MODE,	RX_MODE,	TX_MODE,
+#else
+	INACTIVE_MODE,	INACTIVE_MODE,	TX_MODE,	RX_MODE,
+#endif
 	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
 	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
 	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
@@ -787,6 +791,8 @@ static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
 	{"mcasp0_axr1.gpio3_20", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//rm_en,out
 	{"mcasp0_fsr.gpio3_19", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//rm_state
 
+	
+	{"lcd_ac_bias_en.gpio2_25", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//mma8452 interrupt
 
 	{NULL, 0},
 };
@@ -960,6 +966,7 @@ static struct gpio_led irtk2_gpio_leds[] = {
 	{
 		.name			= "encrypt-chip",
 		.gpio			= GPIO_TO_PIN(2, 5),
+		.default_state		= LEDS_GPIO_DEFSTATE_ON,
 	},
 };
 
@@ -1941,9 +1948,18 @@ static void i2c1_init(int evm_id, int profile)
 }
 
 
+/* mma8452 support code */
+static struct mxc_mma845x_platform_data mma845x_data = {
+		.gpio_pin_get = NULL,
+		.gpio_pin_put = NULL,
+		.int1 = -EINVAL,//GPIO_TO_PIN(2, 25), // ACCL_INT1 is gpio for MMA845X INT1
+		.int2 = -EINVAL, // ACCL_INT2 is gpio for MMA845X INT2
+	 };
+
 static struct i2c_board_info am335x_i2c2_boardinfo[] = {	
 	{
-		I2C_BOARD_INFO("mma8450", 0x1c),
+		I2C_BOARD_INFO("mma845x", 0x1c),
+		.platform_data = &mma845x_data,
 	},
 };
 
