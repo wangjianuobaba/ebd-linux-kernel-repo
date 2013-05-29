@@ -482,8 +482,10 @@ static struct pinmux_config spi1_pin_mux[] = {
 		| AM33XX_INPUT_EN},
 	{"mcasp0_fsx.spi1_d0", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
 		| AM33XX_PULL_UP | AM33XX_INPUT_EN},
+#ifndef IRTK2_ZHD
 	{"mcasp0_axr0.spi1_d1", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
 		| AM33XX_INPUT_EN},
+#endif
 	{"mcasp0_ahclkr.spi1_cs0", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
 		| AM33XX_PULL_UP | AM33XX_INPUT_EN},
 	{NULL, 0},
@@ -751,6 +753,8 @@ static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
 	{"mii1_txd2.gpio0_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//uart mux
 	{"lcd_data11.gpio2_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led and misc power enable
 	{"lcd_data13.gpio0_9", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//accelerometer power enable
+
+	//wifi
 	{"lcd_data15.gpio0_11", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//wifi module power enable
 
 	//control panel
@@ -792,6 +796,9 @@ static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
 	{"lcd_ac_bias_en.gpio2_25", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//mma8452 interrupt
 
 	//lcd12864
+	{"mcasp0_ahclkx.gpio3_21", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//lcd reset
+	{"mcasp0_axr0.gpio3_16",OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//lcd data_control select
+
 	//ethernet
 	{"lcd_data14.gpio0_10", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//ethernet power enable
 
@@ -852,12 +859,12 @@ static struct gpio_keys_button irtk2_gpio_buttons[]=
 	{
 		.code	= BTN_C,
 		.gpio	= GPIO_TO_PIN(1,28),
-		.desc	= "bt-chg",
+		.desc	= "bat-chg",
 	},
 	{
 		.code	= BTN_X,
 		.gpio	= GPIO_TO_PIN(0,30),
-		.desc	= "bt-flt",
+		.desc	= "bat-flt",
 	},
 	{
 		.code	= BTN_Z,
@@ -967,6 +974,11 @@ static struct gpio_led irtk2_gpio_leds[] = {
 	{
 		.name			= "encrypt-chip",
 		.gpio			= GPIO_TO_PIN(2, 5),
+		.default_state		= LEDS_GPIO_DEFSTATE_ON,
+	},
+	{
+		.name			= "lcd-power",
+		.gpio			= GPIO_TO_PIN(3, 21),
 		.default_state		= LEDS_GPIO_DEFSTATE_ON,
 	},
 };
@@ -1241,7 +1253,7 @@ static struct pinmux_config ecap2_pin_mux[] = {
 };
 
 #define AM335XEVM_WLAN_PMENA_GPIO	GPIO_TO_PIN(1, 30)
-#ifdef ITRK2_ZHD
+#ifdef IRTK2_ZHD
 #define AM335XEVM_WLAN_IRQ_GPIO		GPIO_TO_PIN(0, 27)
 #else
 #define AM335XEVM_WLAN_IRQ_GPIO		GPIO_TO_PIN(3, 17)
@@ -1293,9 +1305,9 @@ static struct pinmux_config uart1_wl12xx_pin_mux[] = {
 static struct pinmux_config wl12xx_pin_mux[] = {
 #ifdef IRTK2_ZHD //for irtk2
 
-	{"gpmc_ad10.gpio0_26", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
-	{"gpmc_ad11.gpio0_27", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
-	{"gpmc_ad9.gpio0_23", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT_PULLUP},
+	{"gpmc_ad10.gpio0_26", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT_PULLUP},//wl enable
+	{"gpmc_ad11.gpio0_27", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//wl irq
+	{"gpmc_ad9.gpio0_23", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//bt enable
 
 #else	
 
@@ -1608,9 +1620,19 @@ static struct spi_board_info am335x_spi0_slave_info[] = {
 static struct spi_board_info am335x_spi1_slave_info[] = {
 	{
 		.modalias      = "m25p80",
-		.platform_data = &am335x_spi_flash,
+		//.platform_data = &am335x_spi_flash,
 		.irq           = -1,
 		.max_speed_hz  = 12000000,
+		.bus_num       = 2,
+		.chip_select   = 0,
+	},
+};
+
+static struct spi_board_info irtk2_spi1_slave_info[] = {
+	{
+		.modalias      = "spidev",
+		.irq           = -1,
+		.max_speed_hz  = 10000000,
 		.bus_num       = 2,
 		.chip_select   = 0,
 	},
@@ -2073,7 +2095,12 @@ static void wl12xx_bluetooth_enable(void)
 		AM33XX_L4_WK_IO_ADDRESS(AM33XX_SCM_BASE + (reg))
 
 /* wlan enable pin */
-#define AM33XX_CONTROL_PADCONF_GPMC_CSN0_OFFSET		0x087C
+#ifdef IRTK2_ZHD
+#define WLAN_ENABLE_PIN	0x0828
+#else
+#define WLAN_ENABLE_PIN 0x087C
+#endif
+#define AM33XX_CONTROL_PADCONF_GPMC_CSN0_OFFSET		WLAN_ENABLE_PIN
 static int wl12xx_set_power(struct device *dev, int slot, int on, int vdd)
 {
 	int pad_mux_value;
@@ -2083,21 +2110,28 @@ static int wl12xx_set_power(struct device *dev, int slot, int on, int vdd)
 
 		/* Enable pullup on the WLAN enable pin for keeping wlan active during suspend
 		   in wowlan mode */
+#ifndef IRTK2_ZHD	//needed for irtk2 wlan to work properly
 		if ( am335x_evm_get_id() == EVM_SK ) {
+#endif
 			pad_mux_value = readl(AM33XX_CTRL_REGADDR(AM33XX_CONTROL_PADCONF_GPMC_CSN0_OFFSET));
 			pad_mux_value &= (~AM33XX_PULL_DISA);
 			writel(pad_mux_value, AM33XX_CTRL_REGADDR(AM33XX_CONTROL_PADCONF_GPMC_CSN0_OFFSET));
+#ifndef IRTK2_ZHD
 		}
-
+#endif
 		mdelay(70);
 	} else {
 		gpio_direction_output(am335xevm_wlan_data.wlan_enable_gpio, 0);
 		/* Disable pullup on the WLAN enable when WLAN is off */
+#ifndef IRTK2_ZHD
 		if ( am335x_evm_get_id() == EVM_SK ) {
+#endif
 			pad_mux_value = readl(AM33XX_CTRL_REGADDR(AM33XX_CONTROL_PADCONF_GPMC_CSN0_OFFSET));
 			pad_mux_value |= AM33XX_PULL_DISA;
 			writel(pad_mux_value, AM33XX_CTRL_REGADDR(AM33XX_CONTROL_PADCONF_GPMC_CSN0_OFFSET));
+#ifndef IRTK2_ZHD
 		}
+#endif
 	}
 
 	return 0;
@@ -2368,8 +2402,13 @@ static void spi0_init(int evm_id, int profile)
 static void spi1_init(int evm_id, int profile)
 {
 	setup_pin_mux(spi1_pin_mux);
+#ifdef IRTK2_ZHD
+	spi_register_board_info(irtk2_spi1_slave_info,
+			ARRAY_SIZE(irtk2_spi1_slave_info));
+#else
 	spi_register_board_info(am335x_spi1_slave_info,
 			ARRAY_SIZE(am335x_spi1_slave_info));
+#endif	
 	return;
 }
 
@@ -2394,6 +2433,7 @@ static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
 #ifdef IRTK2_ZHD
 	{irtk2_gpio_keys_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{irtk2_gpio_led_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	//{spi1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{rgmii2_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
