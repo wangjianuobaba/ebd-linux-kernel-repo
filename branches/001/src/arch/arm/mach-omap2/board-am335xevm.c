@@ -71,6 +71,8 @@
 /* Convert GPIO signal to GPIO pin number */
 #define GPIO_TO_PIN(bank, gpio) (32 * (bank) + (gpio))
 
+#include <linux/olcd12864.h>
+
 /* BBB PHY IDs */
 #define BBB_PHY_ID		0x7c0f1
 #define BBB_PHY_MASK		0xfffffffe
@@ -976,11 +978,13 @@ static struct gpio_led irtk2_gpio_leds[] = {
 		.gpio			= GPIO_TO_PIN(2, 5),
 		.default_state		= LEDS_GPIO_DEFSTATE_ON,
 	},
+/*
 	{
 		.name			= "lcd-power",
 		.gpio			= GPIO_TO_PIN(3, 21),
 		.default_state		= LEDS_GPIO_DEFSTATE_ON,
 	},
+*/
 };
 
 static struct gpio_led_platform_data irtk2_gpio_led_info = {
@@ -1620,7 +1624,7 @@ static struct spi_board_info am335x_spi0_slave_info[] = {
 static struct spi_board_info am335x_spi1_slave_info[] = {
 	{
 		.modalias      = "m25p80",
-		//.platform_data = &am335x_spi_flash,
+		.platform_data = &am335x_spi_flash,
 		.irq           = -1,
 		.max_speed_hz  = 12000000,
 		.bus_num       = 2,
@@ -1628,9 +1632,15 @@ static struct spi_board_info am335x_spi1_slave_info[] = {
 	},
 };
 
+static const struct lcd12864_plat_data olcd12864_plat = {
+	.lcd_dc = GPIO_TO_PIN(3, 16),
+	.lcd_reset = GPIO_TO_PIN(3, 21),
+};
+
 static struct spi_board_info irtk2_spi1_slave_info[] = {
 	{
-		.modalias      = "spidev",
+		.modalias      = "olcd12864",
+		.platform_data = &olcd12864_plat,
 		.irq           = -1,
 		.max_speed_hz  = 10000000,
 		.bus_num       = 2,
@@ -2096,9 +2106,9 @@ static void wl12xx_bluetooth_enable(void)
 
 /* wlan enable pin */
 #ifdef IRTK2_ZHD
-#define WLAN_ENABLE_PIN	0x0828
+#define WLAN_ENABLE_PIN	0x0828	//gpmc_ad11 for irtk2
 #else
-#define WLAN_ENABLE_PIN 0x087C
+#define WLAN_ENABLE_PIN 0x087C	//gpmc_csn0
 #endif
 #define AM33XX_CONTROL_PADCONF_GPMC_CSN0_OFFSET		WLAN_ENABLE_PIN
 static int wl12xx_set_power(struct device *dev, int slot, int on, int vdd)

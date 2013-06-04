@@ -7,7 +7,7 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-
+#define DEBUG
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/init.h>
@@ -207,13 +207,9 @@ SOC_SINGLE("ALC Attack", WM8960_ALC3, 0, 15, 0),
 SOC_SINGLE("Noise Gate Threshold", WM8960_NOISEG, 3, 31, 0),
 SOC_SINGLE("Noise Gate Switch", WM8960_NOISEG, 0, 1, 0),
 
-#ifdef IRTK2_ZHD
-SOC_DOUBLE_R_TLV("ADC PCM Capture Volume", WM8960_LINPATH, WM8960_RINPATH,
-	4, 3, 0, input_pag_tlv),
-#else
 SOC_DOUBLE_R("ADC PCM Capture Volume", WM8960_LINPATH, WM8960_RINPATH,
 	0, 127, 0),
-#endif
+
 
 SOC_SINGLE_TLV("Left Output Mixer Boost Bypass Volume",
 	       WM8960_BYPASS1, 4, 7, 1, bypass_tlv),
@@ -270,7 +266,7 @@ SND_SOC_DAPM_INPUT("RINPUT2"),
 SND_SOC_DAPM_INPUT("LINPUT3"),
 SND_SOC_DAPM_INPUT("RINPUT3"),
 
-SND_SOC_DAPM_MICBIAS("MICB", WM8960_POWER1, 1, 0),
+SND_SOC_DAPM_SUPPLY("MICB", WM8960_POWER1, 1, 0, NULL, 0),
 
 SND_SOC_DAPM_MIXER("Left Boost Mixer", WM8960_POWER1, 5, 0,
 		   wm8960_lin_boost, ARRAY_SIZE(wm8960_lin_boost)),
@@ -282,13 +278,10 @@ SND_SOC_DAPM_MIXER("Left Input Mixer", WM8960_POWER3, 5, 0,
 SND_SOC_DAPM_MIXER("Right Input Mixer", WM8960_POWER3, 4, 0,
 		   wm8960_rin, ARRAY_SIZE(wm8960_rin)),
 
-#ifdef IRTK2_ZHD
+
 SND_SOC_DAPM_ADC("Left ADC", "Capture", WM8960_POWER1, 3, 0),
 SND_SOC_DAPM_ADC("Right ADC", "Capture", WM8960_POWER1, 2, 0),
-#else
-SND_SOC_DAPM_ADC("Left ADC", "Capture", WM8960_POWER2, 3, 0),
-SND_SOC_DAPM_ADC("Right ADC", "Capture", WM8960_POWER2, 2, 0),
-#endif
+
 
 SND_SOC_DAPM_DAC("Left DAC", "Playback", WM8960_POWER2, 8, 0),
 SND_SOC_DAPM_DAC("Right DAC", "Playback", WM8960_POWER2, 7, 0),
@@ -536,16 +529,20 @@ static int wm8960_hw_params(struct snd_pcm_substream *substream,
 		break;
 	}
 
+	pr_debug(">>>>%s, new rate is set.\n", __func__);
 	/* Update filters for the new rate */
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		wm8960->playback_fs = params_rate(params);
+		pr_debug(">>>>the frame rate is %dHz.\n", wm8960->playback_fs);
 		wm8960_set_deemph(codec);
-	} else {
+	} else { //for audio record
 		for (i = 0; i < ARRAY_SIZE(alc_rates); i++)
-			if (alc_rates[i].rate == params_rate(params))
+			if (alc_rates[i].rate == params_rate(params)){
 				snd_soc_update_bits(codec,
 						    WM8960_ADDCTL3, 0x7,
 						    alc_rates[i].val);
+			pr_debug(">>>>the alc rate is %dHz.\n", alc_rates[i].rate);
+			}
 	}
 
 	/* set iface */
@@ -559,9 +556,9 @@ static int wm8960_mute(struct snd_soc_dai *dai, int mute)
 	u16 mute_reg = snd_soc_read(codec, WM8960_DACCTL1) & 0xfff7;
 
 	if (mute)
-		snd_soc_write(codec, WM8960_DACCTL1, mute_reg | 0x8);
+		snd_soc_update_bits(codec, WM8960_DACCTL1, 0x8 , 0x8);
 	else
-		snd_soc_write(codec, WM8960_DACCTL1, mute_reg);
+		snd_soc_update_bits(codec, WM8960_DACCTL1, 0x8, 0);
 	return 0;
 }
 
@@ -577,7 +574,7 @@ static int wm8960_set_bias_level_out3(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_PREPARE:
 		/* Set VMID to 2x50k */
 		reg = snd_soc_read(codec, WM8960_POWER1);
-		reg &= ~0x180;
+		reg &= ~0x180;//never disable master clock//~0x180;
 		reg |= 0x80;
 		snd_soc_write(codec, WM8960_POWER1, reg);
 		break;
@@ -606,7 +603,7 @@ static int wm8960_set_bias_level_out3(struct snd_soc_codec *codec,
 
 		/* Set VMID to 2x250k */
 		reg = snd_soc_read(codec, WM8960_POWER1);
-		reg &= ~0x180;
+		reg &= ~0x180;//never disable master clock//~0x180;
 		reg |= 0x100;
 		snd_soc_write(codec, WM8960_POWER1, reg);
 		break;
@@ -802,10 +799,8 @@ static int wm8960_set_dai_pll(struct snd_soc_dai *codec_dai, int pll_id,
 
 	/* Disable the PLL: even if we are changing the frequency the
 	 * PLL needs to be disabled while we do so. */
-	snd_soc_write(codec, WM8960_CLOCK1,
-		     snd_soc_read(codec, WM8960_CLOCK1) & ~1);
-	snd_soc_write(codec, WM8960_POWER2,
-		     snd_soc_read(codec, WM8960_POWER2) & ~1);
+	snd_soc_update_bits(codec, WM8960_CLOCK1, 0x1, 0);
+	snd_soc_update_bits(codec, WM8960_POWER2, 0x1, 0);
 
 	if (!freq_in || !freq_out)
 		return 0;
@@ -824,11 +819,9 @@ static int wm8960_set_dai_pll(struct snd_soc_dai *codec_dai, int pll_id,
 	snd_soc_write(codec, WM8960_PLL1, reg);
 
 	/* Turn it on */
-	snd_soc_write(codec, WM8960_POWER2,
-		     snd_soc_read(codec, WM8960_POWER2) | 1);
+	snd_soc_update_bits(codec, WM8960_POWER2, 0x1, 0x1);
 	msleep(250);
-	snd_soc_write(codec, WM8960_CLOCK1,
-		     snd_soc_read(codec, WM8960_CLOCK1) | 1);
+	snd_soc_update_bits(codec, WM8960_CLOCK1, 0x1, 0x1);
 
 	return 0;
 }
@@ -990,6 +983,11 @@ snd_soc_update_bits(codec,WM8960_ROUT2, ~0, 0x17f);// RSPK Vol = 0dB, volume upd
 snd_soc_update_bits(codec,WM8960_LOUT1, ~0, 0x169);// LOUT1 Vol = 0dB, volume update enabled  
 snd_soc_update_bits(codec,WM8960_ROUT1, ~0, 0x169);// ROUT1 Vol = 0dB, volume update enabled   
 snd_soc_update_bits(codec,WM8960_DACCTL1, ~0, 0x000);// Unmute DAC digital soft mute
+snd_soc_update_bits(codec,WM8960_IFACE2, ~0, 0x040);// ADCLRC as gpio
+
+//snd_soc_update_bits(codec,WM8960_BYPASS1, ~0, 0x0d0);// lb2lo
+//snd_soc_update_bits(codec,WM8960_BYPASS2, ~0, 0x0d0);// rb2ro
+snd_soc_update_bits(codec,WM8960_ADDCTL2, ~0, 0x004);// DACLRC need be work on both play and record mode
 
 	snd_soc_add_controls(codec, wm8960_snd_controls,
 				     ARRAY_SIZE(wm8960_snd_controls));
