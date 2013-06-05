@@ -49,3 +49,4 @@ obj-y				+= carma/
 obj-$(CONFIG_USB_SWITCH_FSA9480) += fsa9480.o
 obj-$(CONFIG_ALTERA_STAPL)	+=altera-stapl/
 obj-$(CONFIG_HELLO_MODULE)	+= olcd12864.o
+obj-$(CONFIG_SENSORS_MMA8X5X)        += mma8x5x.o

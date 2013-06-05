@@ -574,7 +574,7 @@ static int wm8960_set_bias_level_out3(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_PREPARE:
 		/* Set VMID to 2x50k */
 		reg = snd_soc_read(codec, WM8960_POWER1);
-		reg &= ~0x180;//never disable master clock//~0x180;
+		reg &= ~0x180;
 		reg |= 0x80;
 		snd_soc_write(codec, WM8960_POWER1, reg);
 		break;
@@ -603,7 +603,7 @@ static int wm8960_set_bias_level_out3(struct snd_soc_codec *codec,
 
 		/* Set VMID to 2x250k */
 		reg = snd_soc_read(codec, WM8960_POWER1);
-		reg &= ~0x180;//never disable master clock//~0x180;
+		reg &= ~0x180;
 		reg |= 0x100;
 		snd_soc_write(codec, WM8960_POWER1, reg);
 		break;

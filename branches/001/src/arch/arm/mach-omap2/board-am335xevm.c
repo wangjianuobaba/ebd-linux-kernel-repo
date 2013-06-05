@@ -1991,8 +1991,8 @@ static struct mxc_mma845x_platform_data mma845x_data = {
 
 static struct i2c_board_info am335x_i2c2_boardinfo[] = {	
 	{
-		I2C_BOARD_INFO("mma845x", 0x1c),
-		.platform_data = &mma845x_data,
+		I2C_BOARD_INFO("mma8x5x", 0x1c),
+		//.platform_data = &mma845x_data,
 	},
 };
 
@@ -2413,8 +2413,8 @@ static void spi1_init(int evm_id, int profile)
 {
 	setup_pin_mux(spi1_pin_mux);
 #ifdef IRTK2_ZHD
-	spi_register_board_info(irtk2_spi1_slave_info,
-			ARRAY_SIZE(irtk2_spi1_slave_info));
+	//spi_register_board_info(irtk2_spi1_slave_info,
+	//		ARRAY_SIZE(irtk2_spi1_slave_info));
 #else
 	spi_register_board_info(am335x_spi1_slave_info,
 			ARRAY_SIZE(am335x_spi1_slave_info));
