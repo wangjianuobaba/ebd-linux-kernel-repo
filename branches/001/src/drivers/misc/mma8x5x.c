@@ -156,6 +156,8 @@ static char * mma8x5x_names[] ={
    "mma8652",
    "mma8653",
 };
+
+//for changing the parity of all three axises
 static int mma8x5x_position_setting[8][3][3] =
 {
    {{ 0, -1,  0}, { 1,  0,	0}, {0, 0,	1}},
@@ -183,9 +185,9 @@ static int mma8x5x_data_convert(struct mma8x5x_data* pdata,struct mma8x5x_data_a
    	for(j = 0; j < 3; j++)
 		data[i] += rawdata[j] * mma8x5x_position_setting[position][i][j];
    }
-   axis_data->x = data[0];
-   axis_data->y = data[1];
-   axis_data->z = data[2];
+   axis_data->x = data[0] >> 4;
+   axis_data->y = data[1] >> 4;
+   axis_data->z = data[2] >> 4;
    return 0;
 }
 static int mma8x5x_check_id(int id){
@@ -434,9 +436,9 @@ static int __devinit mma8x5x_probe(struct i2c_client *client,
 	idev->uniq = mma8x5x_id2name(pdata->chip_id);
 	idev->id.bustype = BUS_I2C;
 	idev->evbit[0] = BIT_MASK(EV_ABS);
-	input_set_abs_params(idev, ABS_X, -0x7fff, 0x7fff, 0, 0);
-	input_set_abs_params(idev, ABS_Y, -0x7fff, 0x7fff, 0, 0);
-	input_set_abs_params(idev, ABS_Z, -0x7fff, 0x7fff, 0, 0);
+	input_set_abs_params(idev, ABS_X, (-0x7fff >> 4), (0x7fff >> 4), 0, 0);
+	input_set_abs_params(idev, ABS_Y, (-0x7fff >> 4), (0x7fff >> 4), 0, 0);
+	input_set_abs_params(idev, ABS_Z, (-0x7fff >> 4), (0x7fff >> 4), 0, 0);
     pdata->poll_dev = poll_dev;
 	result = input_register_polled_device(pdata->poll_dev);
 	if (result) {

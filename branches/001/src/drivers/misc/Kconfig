@@ -500,8 +500,8 @@ config USB_SWITCH_FSA9480
 	  stereo and mono audio, video, microphone and UART data to use
 	  a common connector port.
 
-config HELLO_MODULE
-	tristate "ebd-bo, hello world"
+config OLED12864_MODULE
+	tristate "OLED12864_SPI"
 	depends on SPI
 	default n
 

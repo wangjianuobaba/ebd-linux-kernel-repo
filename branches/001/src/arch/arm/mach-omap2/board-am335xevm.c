@@ -482,12 +482,13 @@ static struct pinmux_config spi0_pin_mux[] = {
 static struct pinmux_config spi1_pin_mux[] = {
 	{"mcasp0_aclkx.spi1_sclk", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
 		| AM33XX_INPUT_EN},
+#ifndef IRTK2_ZHD  //spi's direction seems reverse from the reference. our test confirm that.
 	{"mcasp0_fsx.spi1_d0", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
 		| AM33XX_PULL_UP | AM33XX_INPUT_EN},
-#ifndef IRTK2_ZHD
+#endif
 	{"mcasp0_axr0.spi1_d1", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
 		| AM33XX_INPUT_EN},
-#endif
+
 	{"mcasp0_ahclkr.spi1_cs0", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
 		| AM33XX_PULL_UP | AM33XX_INPUT_EN},
 	{NULL, 0},
@@ -799,7 +800,7 @@ static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
 
 	//lcd12864
 	{"mcasp0_ahclkx.gpio3_21", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//lcd reset
-	{"mcasp0_axr0.gpio3_16",OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//lcd data_control select
+	{"mcasp0_fsx.gpio3_15",OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//lcd data_control select
 
 	//ethernet
 	{"lcd_data14.gpio0_10", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//ethernet power enable
@@ -1633,7 +1634,7 @@ static struct spi_board_info am335x_spi1_slave_info[] = {
 };
 
 static const struct lcd12864_plat_data olcd12864_plat = {
-	.lcd_dc = GPIO_TO_PIN(3, 16),
+	.lcd_dc = GPIO_TO_PIN(3, 15),
 	.lcd_reset = GPIO_TO_PIN(3, 21),
 };
 
@@ -1642,9 +1643,10 @@ static struct spi_board_info irtk2_spi1_slave_info[] = {
 		.modalias      = "olcd12864",
 		.platform_data = &olcd12864_plat,
 		.irq           = -1,
-		.max_speed_hz  = 10000000,
+		.max_speed_hz  = 6000000,
 		.bus_num       = 2,
 		.chip_select   = 0,
+                .mode = SPI_MODE_0,
 	},
 };
 
@@ -2413,8 +2415,8 @@ static void spi1_init(int evm_id, int profile)
 {
 	setup_pin_mux(spi1_pin_mux);
 #ifdef IRTK2_ZHD
-	//spi_register_board_info(irtk2_spi1_slave_info,
-	//		ARRAY_SIZE(irtk2_spi1_slave_info));
+	spi_register_board_info(irtk2_spi1_slave_info,
+			ARRAY_SIZE(irtk2_spi1_slave_info));
 #else
 	spi_register_board_info(am335x_spi1_slave_info,
 			ARRAY_SIZE(am335x_spi1_slave_info));
@@ -2443,7 +2445,6 @@ static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
 #ifdef IRTK2_ZHD
 	{irtk2_gpio_keys_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{irtk2_gpio_led_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-	//{spi1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{rgmii2_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
@@ -2459,6 +2460,7 @@ static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
 	{uart3_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{uart1_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},//for irtk2, uart1 only
 	{uart45_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{spi1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},	//put spi at last to avoid error
 
 	{NULL, 0, 0},
 #else
