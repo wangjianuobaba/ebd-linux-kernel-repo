@@ -133,7 +133,6 @@ static int lcd12864_open(struct inode *inode, struct file *filp)
     int status = -ENXIO;
 
     mutex_lock(&device_list_lock); //lock this device
-,
     /* search for device info from system, and fill in */
     list_for_each_entry(lcd_dev, &device_list, device_entry)
     {

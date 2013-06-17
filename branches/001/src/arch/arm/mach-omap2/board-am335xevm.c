@@ -753,10 +753,16 @@ static struct pinmux_config gpio_ddr_vtt_enb_pin_mux[] = {
 static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
 	{"lcd_hsync.gpio2_23", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//system power enable
 	{"lcd_pclk.gpio2_24", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//ddr3 power enable
-	{"mii1_txd2.gpio0_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//uart mux
 	{"lcd_data11.gpio2_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//led and misc power enable
 	{"lcd_data13.gpio0_9", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//accelerometer power enable
 
+        //uart mux
+        {"mii1_txd2.gpio0_17", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},     //uart0: 0->terminal, 1->small_5_wire
+        {"mii1_txen.gpio3_3", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},      //conjuction, 0:uart5<->small_5_wire_tx, 1:uart5<->radio_tx
+        {"mii1_txd1.gpio0_21", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},     //uart5: 1->radio(or small_5_wire), 0->gprs
+        {"mii1_txd0.gpio0_28", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},     //0:uart2<->gps_com1_rx,uart1<->bluetooth_rx, 1:l_8_rx<->gps_com1_tx
+        {"mcasp0_aclkr.gpio3_18", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//L8 insert detect,in, 0->bluetooth_tx, 1->l_8_wire_tx
+        
 	//wifi
 	{"lcd_data15.gpio0_11", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//wifi module power enable
 
@@ -790,7 +796,7 @@ static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
 
 	{"gpmc_wpn.gpio0_31", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//ltc4412 wall_in
 	{"lcd_vsync.gpio2_22", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//ltc2955 pcl_int,in
-	{"mcasp0_aclkr.gpio3_18", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},	//L8 insert detect,in
+	
 
 	//radio
 	{"mcasp0_axr1.gpio3_20", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//rm_en,out
@@ -802,9 +808,11 @@ static struct pinmux_config gpio_irtk2_enb_pin_mux[]={
 	{"mcasp0_ahclkx.gpio3_21", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//lcd reset
 	{"mcasp0_fsx.gpio3_15",OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//lcd data_control select
 
-	//ethernet
+	//Ethernet
 	{"lcd_data14.gpio0_10", OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},	//ethernet power enable
 
+        
+        
 	{NULL, 0},
 };
 
@@ -967,10 +975,6 @@ static struct gpio_led irtk2_gpio_leds[] = {
 		.default_state		= LEDS_GPIO_DEFSTATE_ON,
 	},
 	{
-		.name			= "uart0-select",
-		.gpio			= GPIO_TO_PIN(0, 17),	
-	},
-	{
 		.name			= "radio-power",
 		.gpio			= GPIO_TO_PIN(3, 20),	
 	},
@@ -979,6 +983,27 @@ static struct gpio_led irtk2_gpio_leds[] = {
 		.gpio			= GPIO_TO_PIN(2, 5),
 		.default_state		= LEDS_GPIO_DEFSTATE_ON,
 	},
+        {
+		.name			= "tty0-console-none",
+		.gpio			= GPIO_TO_PIN(0, 17),
+                .default_state		= LEDS_GPIO_DEFSTATE_OFF,//start as console
+	},
+        {
+		.name			= "tty5-sm5-radio",
+		.gpio			= GPIO_TO_PIN(3, 3),
+                .default_state		= LEDS_GPIO_DEFSTATE_ON,//tty5 wire -> radio
+	},
+        {
+		.name			= "tty5-gprs-radio",
+		.gpio			= GPIO_TO_PIN(0, 21),
+                .default_state		= LEDS_GPIO_DEFSTATE_ON,//tty5->gprs
+	},
+        {
+		.name			= "tty1-bt-l8",
+		.gpio			= GPIO_TO_PIN(0, 28),
+                .default_state		= LEDS_GPIO_DEFSTATE_OFF,
+	},
+
 /*
 	{
 		.name			= "lcd-power",
