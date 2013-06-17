@@ -690,8 +690,8 @@ static struct pinmux_config mmc1_cd_only_pin_mux[] = {
 
 /* Module pin mux for uart3 */
 static struct pinmux_config uart3_pin_mux[] = {
-	{"spi0_cs1.uart3_rxd", AM33XX_PIN_INPUT_PULLUP},
-	{"ecap0_in_pwm0_out.uart3_txd", AM33XX_PULL_ENBL},
+	{"spi0_cs1.uart3_rxd", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLUP},
+	{"ecap0_in_pwm0_out.uart3_txd", OMAP_MUX_MODE1 | AM33XX_PULL_ENBL},
 	{NULL, 0},
 };
 
@@ -959,10 +959,12 @@ static struct gpio_led irtk2_gpio_leds[] = {
 	{
 		.name			= "gprs-power-enable",
 		.gpio			= GPIO_TO_PIN(2, 19),
+                .default_state		= LEDS_GPIO_DEFSTATE_ON, //power up
 	},
 	{
 		.name			= "gprs-on",
-		.gpio			= GPIO_TO_PIN(2, 18),	
+		.gpio			= GPIO_TO_PIN(2, 18),
+                .default_state		= LEDS_GPIO_DEFSTATE_ON, //disable functioning
 	},
 	{
 		.name			= "audio-power",
