@@ -72,6 +72,7 @@
 #define GPIO_TO_PIN(bank, gpio) (32 * (bank) + (gpio))
 
 #include <linux/olcd12864.h>
+#include <linux/input/adxl34x.h>
 
 /* BBB PHY IDs */
 #define BBB_PHY_ID		0x7c0f1
@@ -950,11 +951,13 @@ static struct gpio_led irtk2_gpio_leds[] = {
 	},
 	{
 		.name			= "gps-off",
-		.gpio			= GPIO_TO_PIN(2, 12),	
+		.gpio			= GPIO_TO_PIN(2, 12),
+                .default_state		= LEDS_GPIO_DEFSTATE_ON,
 	},
 	{
 		.name			= "gps-reset",
-		.gpio			= GPIO_TO_PIN(2, 11),	
+		.gpio			= GPIO_TO_PIN(2, 11),
+                .default_state		= LEDS_GPIO_DEFSTATE_ON,
 	},
 	{
 		.name			= "gprs-power-enable",
@@ -2010,19 +2013,16 @@ static void i2c1_init(int evm_id, int profile)
 }
 
 
-/* mma8452 support code */
-static struct mxc_mma845x_platform_data mma845x_data = {
-		.gpio_pin_get = NULL,
-		.gpio_pin_put = NULL,
-		.int1 = -EINVAL,//GPIO_TO_PIN(2, 25), // ACCL_INT1 is gpio for MMA845X INT1
-		.int2 = -EINVAL, // ACCL_INT2 is gpio for MMA845X INT2
-	 };
-
 static struct i2c_board_info am335x_i2c2_boardinfo[] = {	
 	{
 		I2C_BOARD_INFO("mma8x5x", 0x1c),
 		//.platform_data = &mma845x_data,
 	},
+        {
+                I2C_BOARD_INFO("adxl34x", 0x53),
+                .irq = 249,//gpio related, gpio2_25
+                
+        },
 };
 
 static void i2c2_init(int evm_id, int profile)

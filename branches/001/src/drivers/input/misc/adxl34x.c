@@ -6,7 +6,7 @@
  * Copyright (C) 2009 Michael Hennerich, Analog Devices Inc.
  * Licensed under the GPL-2 or later.
  */
-
+#define xDEBUG
 #include <linux/device.h>
 #include <linux/init.h>
 #include <linux/delay.h>
@@ -17,8 +17,11 @@
 #include <linux/workqueue.h>
 #include <linux/input/adxl34x.h>
 #include <linux/module.h>
+#include <linux/input-polldev.h>
 
 #include "adxl34x.h"
+
+#define xUSING_POLL //not successful
 
 /* ADXL345/6 Register Map */
 #define DEVID		0x00	/* R   Device ID */
@@ -173,7 +176,8 @@
 #define ADXL346_3D_TOP			1	/* +Z */
 #define ADXL346_3D_BOTTOM		6	/* -Z */
 
-#undef ADXL_DEBUG
+//#undef ADXL_DEBUG
+#define ADXL_DEBUG
 
 #define ADXL_X_AXIS			0
 #define ADXL_Y_AXIS			1
@@ -191,6 +195,7 @@ struct axis_triple {
 struct adxl34x {
 	struct device *dev;
 	struct input_dev *input;
+        struct input_polled_dev *poll_dev;
 	struct mutex mutex;	/* reentrant protection for struct */
 	struct adxl34x_platform_data pdata;
 	struct axis_triple swcal;
@@ -211,19 +216,19 @@ struct adxl34x {
 };
 
 static const struct adxl34x_platform_data adxl34x_default_init = {
-	.tap_threshold = 35,
-	.tap_duration = 3,
-	.tap_latency = 20,
-	.tap_window = 20,
-	.tap_axis_control = ADXL_TAP_X_EN | ADXL_TAP_Y_EN | ADXL_TAP_Z_EN,
+	//.tap_threshold = 35,
+	//.tap_duration = 3,
+	//.tap_latency = 20,
+	//.tap_window = 20,
+	//.tap_axis_control = ADXL_TAP_X_EN | ADXL_TAP_Y_EN | ADXL_TAP_Z_EN,
 	.act_axis_control = 0xFF,
 	.activity_threshold = 6,
 	.inactivity_threshold = 4,
 	.inactivity_time = 3,
 	.free_fall_threshold = 8,
 	.free_fall_time = 0x20,
-	.data_rate = 8,
-	.data_range = ADXL_FULL_RES,
+	.data_rate = 7,
+	.data_range = RANGE_PM_4g,
 
 	.ev_type = EV_ABS,
 	.ev_code_x = ABS_X,	/* EV_REL */
@@ -231,7 +236,7 @@ static const struct adxl34x_platform_data adxl34x_default_init = {
 	.ev_code_z = ABS_Z,	/* EV_REL */
 
 	.ev_code_tap = {BTN_TOUCH, BTN_TOUCH, BTN_TOUCH}, /* EV_KEY {x,y,z} */
-	.power_mode = ADXL_AUTO_SLEEP | ADXL_LINK,
+	.power_mode = /*ADXL_AUTO_SLEEP |*/ ADXL_LINK,
 	.fifo_mode = FIFO_STREAM,
 	.watermark = 0,
 };
@@ -260,13 +265,16 @@ static void adxl34x_service_ev_fifo(struct adxl34x *ac)
 	struct axis_triple axis;
 
 	adxl34x_get_triple(ac, &axis);
-
-	input_event(ac->input, pdata->ev_type, pdata->ev_code_x,
+        //pr_debug(">>>>%s:x is :%d.\n", __func__, axis.x);
+        //pr_debug(">>>>%s:y is :%d.\n", __func__, axis.y);
+        //pr_debug(">>>>%s:z is :%d.\n", __func__, axis.z);
+	input_report_abs(ac->input, pdata->ev_code_x,
 		    axis.x - ac->swcal.x);
-	input_event(ac->input, pdata->ev_type, pdata->ev_code_y,
+	input_report_abs(ac->input, pdata->ev_code_y,
 		    axis.y - ac->swcal.y);
-	input_event(ac->input, pdata->ev_type, pdata->ev_code_z,
+	input_report_abs(ac->input, pdata->ev_code_z,
 		    axis.z - ac->swcal.z);
+        
 }
 
 static void adxl34x_report_key_single(struct input_dev *input, int key)
@@ -314,9 +322,10 @@ static irqreturn_t adxl34x_irq(int irq, void *handle)
 
 	int_stat = AC_READ(ac, INT_SOURCE);
 
-	if (int_stat & FREE_FALL)
+	if (int_stat & FREE_FALL){
 		adxl34x_report_key_single(ac->input, pdata->ev_code_ff);
-
+                dev_dbg(ac->dev, "free fall\n");
+        }
 	if (int_stat & OVERRUN)
 		dev_dbg(ac->dev, "OVERRUN\n");
 
@@ -325,15 +334,21 @@ static irqreturn_t adxl34x_irq(int irq, void *handle)
 
 		if (int_stat & DOUBLE_TAP)
 			adxl34x_do_tap(ac, pdata, tap_stat);
+                
+                dev_dbg(ac->dev, "tap1or2\n");
 	}
 
 	if (pdata->ev_code_act_inactivity) {
-		if (int_stat & ACTIVITY)
+		if (int_stat & ACTIVITY){
 			input_report_key(ac->input,
 					 pdata->ev_code_act_inactivity, 1);
-		if (int_stat & INACTIVITY)
+		dev_dbg(ac->dev, "activity\n");
+                }
+                if (int_stat & INACTIVITY){
 			input_report_key(ac->input,
 					 pdata->ev_code_act_inactivity, 0);
+                dev_dbg(ac->dev, "inactivity\n");
+                }
 	}
 
 	/*
@@ -372,7 +387,7 @@ static irqreturn_t adxl34x_irq(int irq, void *handle)
 			samples = ENTRIES(AC_READ(ac, FIFO_STATUS)) + 1;
 		else
 			samples = 1;
-
+                dev_dbg(ac->dev, "data ready:%d\n", samples);
 		for (; samples > 0; samples--) {
 			adxl34x_service_ev_fifo(ac);
 			/*
@@ -689,6 +704,31 @@ static void adxl34x_input_close(struct input_dev *input)
 	mutex_unlock(&ac->mutex);
 }
 
+static void adxl34x_dev_poll(struct input_polled_dev *dev)
+{
+        struct adxl34x *ac = (struct adxl34x *)dev->private;
+        
+        
+        struct adxl34x_platform_data *pdata = &ac->pdata;
+	struct axis_triple axis;
+        pr_debug(">>>>%s:enter.\n", __func__);
+        
+	adxl34x_get_triple(ac, &axis);
+        pr_debug(">>>>%s:x is :%d.\n", __func__, axis.x);
+        pr_debug(">>>>%s:y is :%d.\n", __func__, axis.y);
+        pr_debug(">>>>%s:z is :%d.\n", __func__, axis.z);
+	input_report_abs(ac->input, pdata->ev_code_x,
+		    axis.x - ac->swcal.x);
+	input_report_abs(ac->input, pdata->ev_code_y,
+		    axis.y - ac->swcal.y);
+	input_report_abs(ac->input, pdata->ev_code_z,
+		    axis.z - ac->swcal.z);
+        if(ac->poll_dev->poll_interval == 200){
+            ac->poll_dev->poll_interval = 100;
+        }
+        input_sync(dev->input);
+}
+
 struct adxl34x *adxl34x_probe(struct device *dev, int irq,
 			      bool fifo_delay_default,
 			      const struct adxl34x_bus_ops *bops)
@@ -706,7 +746,16 @@ struct adxl34x *adxl34x_probe(struct device *dev, int irq,
 	}
 
 	ac = kzalloc(sizeof(*ac), GFP_KERNEL);
+#ifdef USING_POLL
+        ac->poll_dev = input_allocate_polled_device();
+#else
 	input_dev = input_allocate_device();
+#endif
+
+#ifdef USING_POLL
+        input_dev = ac->poll_dev->input;
+#endif
+        
 	if (!ac || !input_dev) {
 		err = -ENOMEM;
 		goto err_free_mem;
@@ -757,7 +806,7 @@ struct adxl34x *adxl34x_probe(struct device *dev, int irq,
 	input_dev->close = adxl34x_input_close;
 
 	input_set_drvdata(input_dev, ac);
-
+#if 0
 	__set_bit(ac->pdata.ev_type, input_dev->evbit);
 
 	if (ac->pdata.ev_type == EV_REL) {
@@ -769,22 +818,27 @@ struct adxl34x *adxl34x_probe(struct device *dev, int irq,
 		__set_bit(ABS_X, input_dev->absbit);
 		__set_bit(ABS_Y, input_dev->absbit);
 		__set_bit(ABS_Z, input_dev->absbit);
-
+#endif
+                input_dev->evbit[0] = BIT_MASK(EV_ABS);
 		if (pdata->data_range & FULL_RES)
 			range = ADXL_FULLRES_MAX_VAL;	/* Signed 13-bit */
 		else
 			range = ADXL_FIXEDRES_MAX_VAL;	/* Signed 10-bit */
 
-		input_set_abs_params(input_dev, ABS_X, -range, range, 3, 3);
-		input_set_abs_params(input_dev, ABS_Y, -range, range, 3, 3);
-		input_set_abs_params(input_dev, ABS_Z, -range, range, 3, 3);
+		input_set_abs_params(input_dev, ABS_X, -range, range, 0, 0);
+		input_set_abs_params(input_dev, ABS_Y, -range, range, 0, 0);
+		input_set_abs_params(input_dev, ABS_Z, -range, range, 0, 0);
+#if 0
 	}
-
+#endif
+        
+#if 0
 	__set_bit(EV_KEY, input_dev->evbit);
 	__set_bit(pdata->ev_code_tap[ADXL_X_AXIS], input_dev->keybit);
 	__set_bit(pdata->ev_code_tap[ADXL_Y_AXIS], input_dev->keybit);
 	__set_bit(pdata->ev_code_tap[ADXL_Z_AXIS], input_dev->keybit);
-
+#endif
+        
 	if (pdata->ev_code_ff) {
 		ac->int_mask = FREE_FALL;
 		__set_bit(pdata->ev_code_ff, input_dev->keybit);
@@ -822,8 +876,16 @@ struct adxl34x *adxl34x_probe(struct device *dev, int irq,
 	err = sysfs_create_group(&dev->kobj, &adxl34x_attr_group);
 	if (err)
 		goto err_free_irq;
-
+#ifdef USING_POLL
+        ac->poll_dev->poll = adxl34x_dev_poll;
+        ac->poll_dev->poll_interval = 200;
+        ac->poll_dev->poll_interval_min = 1;
+        ac->poll_dev->poll_interval_max = 500;
+        ac->poll_dev->private = ac;
+        err = input_register_polled_device(ac->poll_dev);
+#else
 	err = input_register_device(input_dev);
+#endif  
 	if (err)
 		goto err_remove_attr;
 
