@@ -261,9 +261,9 @@ MODULE_PARM_DESC(crypto_devallowsoft,
 	   "Enable/disable use of software crypto support");
 
 /*
- * This parameter controls the maximum number of crypto operations to 
- * do consecutively in the crypto kernel thread before scheduling to allow 
- * other processes to run. Without it, it is possible to get into a 
+ * This parameter controls the maximum number of crypto operations to
+ * do consecutively in the crypto kernel thread before scheduling to allow
+ * other processes to run. Without it, it is possible to get into a
  * situation where the crypto thread never allows any other processes to run.
  * Default to 1000 which should be less than one second.
  */
@@ -1447,7 +1447,7 @@ crypto_proc(void *arg)
 			cryptostats.cs_intrs++;
 		} else if (loopcount > crypto_max_loopcount) {
 			/*
-			 * Give other processes a chance to run if we've 
+			 * Give other processes a chance to run if we've
 			 * been using the CPU exclusively for a while.
 			 */
 			loopcount = 0;
@@ -1725,7 +1725,7 @@ crypto_exit(void)
 		kthread_stop(cryptoretproc[cpu]);
 	}
 
-	/* 
+	/*
 	 * Reclaim dynamically allocated resources.
 	 */
 	if (crypto_drivers != NULL)

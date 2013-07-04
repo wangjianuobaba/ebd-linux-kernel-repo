@@ -20,12 +20,13 @@
 #include <linux/of.h>
 #include <linux/davinci_emac.h>
 #include <linux/cpsw.h>
+#include <linux/phy.h>
 #include <linux/etherdevice.h>
 #include <linux/dma-mapping.h>
 #include <linux/can/platform/d_can.h>
 #include <linux/platform_data/uio_pruss.h>
 #include <linux/pwm/pwm.h>
-#include <linux/input/ti_tscadc.h>
+#include <linux/mfd/ti_tscadc.h>
 
 #include <mach/hardware.h>
 #include <mach/irqs.h>
@@ -194,22 +195,22 @@ int __init am33xx_register_lcdc(struct da8xx_lcdc_platform_data *pdata)
 	return 0;
 }
 
-int __init am33xx_register_tsc(struct tsc_data *pdata)
+int __init am33xx_register_mfd_tscadc(struct mfd_tscadc_board *pdata)
 {
 	int id = -1;
 	struct platform_device *pdev;
 	struct omap_hwmod *oh;
 	char *oh_name = "adc_tsc";
-	char *dev_name = "tsc";
+	char *dev_name = "ti_tscadc";
 
 	oh = omap_hwmod_lookup(oh_name);
 	if (!oh) {
-		pr_err("Could not look up TSC%d hwmod\n", id);
+		pr_err("Could not look up TSCADC%d hwmod\n", id);
 		return -ENODEV;
 	}
 
 	pdev = omap_device_build(dev_name, id, oh, pdata,
-			sizeof(struct tsc_data), NULL, 0, 0);
+			sizeof(struct mfd_tscadc_board), NULL, 0, 0);
 
 	WARN(IS_ERR(pdev), "Can't build omap_device for %s:%s.\n",
 			dev_name, oh->name);
@@ -726,72 +727,18 @@ static void omap_init_sham(void)
 }
 
 #elif defined(CONFIG_CRYPTO_DEV_OMAP4_SHAM) || defined(CONFIG_CRYPTO_DEV_OMAP4_SHAM_MODULE)
-
-static struct resource omap4_sham_resources[] = {
-	{
-		.start	= AM33XX_SHA1MD5_P_BASE,
-		.end	= AM33XX_SHA1MD5_P_BASE + 0x120,
-		.flags	= IORESOURCE_MEM,
-	},
-	{
-		.start	= AM33XX_IRQ_SHAEIP57t0_P,
-		.flags	= IORESOURCE_IRQ,
-	},
-	{
-		.start	= AM33XX_DMA_SHAEIP57T0_DIN,
-		.flags	= IORESOURCE_DMA,
-	}
-};
-
-static int omap4_sham_resources_sz = ARRAY_SIZE(omap4_sham_resources);
-
-
-static struct platform_device sham_device = {
-	.name		= "omap4-sham",
-	.id		= -1,
-};
-
-#if 0
-static void omap_init_sham(void)
+static void __init omap_init_sham(void)
 {
-	sham_device.resource = omap4_sham_resources;
-	sham_device.num_resources = omap4_sham_resources_sz;
-
-	platform_device_register(&sham_device);
-}
-#endif
-
-int __init omap_init_sham(void)
-{
-	int id = -1;
-	struct platform_device *pdev;
 	struct omap_hwmod *oh;
-	char *oh_name = "sha0";
-	char *name = "omap4-sham";
+	struct platform_device *pdev;
 
-	oh = omap_hwmod_lookup(oh_name);
-	if (!oh) {
-		pr_err("Could not look up %s\n", oh_name);
-		return -ENODEV;
-	}
+	oh = omap_hwmod_lookup("sha0");
+	if (!oh)
+		return;
 
-	pdev = omap_device_build(name, id, oh, NULL, 0, NULL, 0, 0);
-	//pdev.resource = omap4_sham_resources;
-	//pdev.num_resources = omap4_sham_resources_sz;
-
-	if (IS_ERR(pdev)) {
-		WARN(1, "Can't build omap_device for %s:%s.\n",
-						name, oh->name);
-		return PTR_ERR(pdev);
-	}
-
-	return 0;
+	pdev = omap_device_build("omap4-sham", -1, oh, NULL, 0, NULL, 0, 0);
+	WARN(IS_ERR(pdev), "Can't build omap_device for omap-sham\n");
 }
-
-
-
-
-
 #else
 static inline void omap_init_sham(void) { }
 #endif
@@ -863,71 +810,37 @@ static void omap_init_aes(void)
 }
 
 #elif defined(CONFIG_CRYPTO_DEV_OMAP4_AES) || defined(CONFIG_CRYPTO_DEV_OMAP4_AES_MODULE)
-
-static struct resource omap4_aes_resources[] = {
-	{
-		.start	= AM33XX_AES0_P_BASE,
-		.end	= AM33XX_AES0_P_BASE + 0x4C,
-		.flags	= IORESOURCE_MEM,
-	},
-	{
-		.start	= AM33XX_DMA_AESEIP36T0_DOUT,
-		.flags	= IORESOURCE_DMA,
-	},
-	{
-		.start	= AM33XX_DMA_AESEIP36T0_DIN,
-		.flags	= IORESOURCE_DMA,
-	}
-};
-static int omap4_aes_resources_sz = ARRAY_SIZE(omap4_aes_resources);
-
-static struct platform_device aes_device = {
-	.name		= "omap4-aes",
-	.id		= -1,
-};
-
-#if 0
-static void omap_init_aes(void)
+static void __init omap_init_aes(void)
 {
-	aes_device.resource = omap4_aes_resources;
-	aes_device.num_resources = omap4_aes_resources_sz;
-	platform_device_register(&aes_device);
-}
-#endif
-
-int __init omap_init_aes(void)
-{
-	int id = -1;
-	struct platform_device *pdev;
 	struct omap_hwmod *oh;
-	char *oh_name = "aes0";
-	char *name = "omap4-aes";
+	struct platform_device *pdev;
 
-	oh = omap_hwmod_lookup(oh_name);
-	if (!oh) {
-		pr_err("Could not look up %s\n", oh_name);
-		return -ENODEV;
-	}
+	oh = omap_hwmod_lookup("aes0");
+	if (!oh)
+		return;
 
-	pdev = omap_device_build(name, id, oh, NULL, 0, NULL, 0, 0);
-	//pdev.resource = omap4_sham_resources;
-	//pdev.num_resources = omap4_sham_resources_sz;
-
-	if (IS_ERR(pdev)) {
-		WARN(1, "Can't build omap_device for %s:%s.\n",
-						name, oh->name);
-		return PTR_ERR(pdev);
-	}
-
-	return 0;
+	pdev = omap_device_build("omap4-aes", -1, oh, NULL, 0, NULL, 0, 0);
+	WARN(IS_ERR(pdev), "Can't build omap_device for omap-aes\n");
 }
-
-
-
-
-
 #else
 static inline void omap_init_aes(void) { }
+#endif
+
+#if IS_ENABLED(CONFIG_HW_RANDOM_OMAP4)
+static void __init omap_init_rng(void)
+{
+	struct omap_hwmod *oh;
+	struct platform_device *pdev;
+
+	oh = omap_hwmod_lookup("rng");
+	if (!oh)
+		return;
+
+	pdev = omap_device_build("omap4_rng", -1, oh, NULL, 0, NULL, 0, 0);
+	WARN(IS_ERR(pdev), "Can't build omap_device for omap-rng\n");
+}
+#else
+static inline void omap_init_rng(void) {}
 #endif
 
 /*-------------------------------------------------------------------------*/
@@ -1159,14 +1072,14 @@ int map_xbar_event_to_channel(unsigned int event, unsigned int *channel,
 		/* confirm the range */
 		if (*channel < EDMA_MAX_DMACH)
 			clear_bit(*channel, edma_cc[ctrl]->edma_unused);
-		mask = (*channel)%4;
 		offset = (*channel)/4;
 		offset *= 4;
-		offset += mask;
 		val = (unsigned int)__raw_readl(AM33XX_CTRL_REGADDR(
 					AM33XX_SCM_BASE_EDMA + offset));
-		val = val & (~(0xFF));
-		val = val | (xbar_event_mapping[xbar_evt_no].xbar_event_no);
+		mask = *channel & 0x3;
+		mask <<= 3;
+		val &= ~(0xFF << mask);
+		val |= xbar_event_mapping[xbar_evt_no].xbar_event_no << mask;
 		__raw_writel(val,
 			AM33XX_CTRL_REGADDR(AM33XX_SCM_BASE_EDMA + offset));
 		return 0;
@@ -1315,247 +1228,316 @@ static struct platform_device am335x_sgx = {
 
 /* smartreflex platform data */
 
-/* The values below are based upon silicon characterization data.  
+/* The values below are based upon silicon characterization data.
  * Each OPP and sensor combination potentially has different values.
  * The values of ERR2VOLT_GAIN and ERR_MIN_LIMIT also change based on
- * the PMIC step size.  Values have been given to cover the AM335 EVM
+ * the PMIC step size.	Values have been given to cover the AM335 EVM
  * (12.5mV step) and the Beaglebone (25mV step).  If the step
  * size changes, you should update these values, and don't forget to
  * change the step size in the platform data structure, am33xx_sr_pdata.
  */
 
-#define AM33XX_SR0_OPP50_CNTRL_OFFSET          0x07B8
-#define AM33XX_SR0_OPP50_EVM_ERR2VOLT_GAIN     0xC
-#define AM33XX_SR0_OPP50_EVM_ERR_MIN_LIMIT     0xF5
-#define AM33XX_SR0_OPP50_BB_ERR2VOLT_GAIN      0x6
-#define AM33XX_SR0_OPP50_BB_ERR_MIN_LIMIT      0xEA
-#define AM33XX_SR0_OPP50_ERR_MAX_LIMIT         0x2
-#define AM33XX_SR0_OPP50_ERR_WEIGHT             0x4
-#define AM33XX_SR0_OPP50_MARGIN                 0
+#define AM33XX_SR0_OPP50_CNTRL_OFFSET		0x07B8
+#define AM33XX_SR0_OPP50_EVM_ERR_MIN_LIMIT	0xF0
+#define AM33XX_SR0_OPP50_BB_ERR_MIN_LIMIT	0xEA
+#define AM33XX_SR0_OPP50_ERR_MAX_LIMIT		0x2
+#define AM33XX_SR0_OPP50_ERR_WEIGHT		0x4
+#define AM33XX_SR0_OPP50_MARGIN			0
 
-#define AM33XX_SR0_OPP100_CNTRL_OFFSET         0x07BC
-#define AM33XX_SR0_OPP100_EVM_ERR2VOLT_GAIN     0x12
-#define AM33XX_SR0_OPP100_EVM_ERR_MIN_LIMIT    0xF8
-#define AM33XX_SR0_OPP100_BB_ERR2VOLT_GAIN      0x9
-#define AM33XX_SR0_OPP100_BB_ERR_MIN_LIMIT     0xF1
-#define AM33XX_SR0_OPP100_ERR_MAX_LIMIT                0x2
-#define AM33XX_SR0_OPP100_ERR_WEIGHT            0x4
-#define AM33XX_SR0_OPP100_MARGIN                0
+#define AM33XX_SR0_OPP100_CNTRL_OFFSET		0x07BC
+#define AM33XX_SR0_OPP100_EVM_ERR_MIN_LIMIT	0xF0
+#define AM33XX_SR0_OPP100_BB_ERR_MIN_LIMIT	0xF1
+#define AM33XX_SR0_OPP100_ERR_MAX_LIMIT		0x2
+#define AM33XX_SR0_OPP100_ERR_WEIGHT		0x4
+#define AM33XX_SR0_OPP100_MARGIN		0
 
-#define AM33XX_SR1_OPP50_CNTRL_OFFSET          0x0770
-#define AM33XX_SR1_OPP50_EVM_ERR2VOLT_GAIN     0x5
-#define AM33XX_SR1_OPP50_EVM_ERR_MIN_LIMIT     0xE6
-#define AM33XX_SR1_OPP50_BB_ERR2VOLT_GAIN      0x2
-#define AM33XX_SR1_OPP50_BB_ERR_MIN_LIMIT      0xC0
-#define AM33XX_SR1_OPP50_ERR_MAX_LIMIT         0x2
-#define AM33XX_SR1_OPP50_ERR_WEIGHT             0x4
-#define AM33XX_SR1_OPP50_MARGIN                 0
+#define AM33XX_SR1_OPP50_CNTRL_OFFSET		0x0770
+#define AM33XX_SR1_OPP50_EVM_ERR_MIN_LIMIT	0xFA
+#define AM33XX_SR1_OPP50_BB_ERR_MIN_LIMIT	0xC0
+#define AM33XX_SR1_OPP50_ERR_MAX_LIMIT		0x2
+#define AM33XX_SR1_OPP50_ERR_WEIGHT		0x4
+#define AM33XX_SR1_OPP50_MARGIN			0
 
-#define AM33XX_SR1_OPP100_CNTRL_OFFSET         0x0774
-#define AM33XX_SR1_OPP100_EVM_ERR2VOLT_GAIN    0x8
-#define AM33XX_SR1_OPP100_EVM_ERR_MIN_LIMIT    0xF0
-#define AM33XX_SR1_OPP100_BB_ERR2VOLT_GAIN     0x4
-#define AM33XX_SR1_OPP100_BB_ERR_MIN_LIMIT     0xDF
-#define AM33XX_SR1_OPP100_ERR_MAX_LIMIT                0x2
-#define AM33XX_SR1_OPP100_ERR_WEIGHT            0x4
-#define AM33XX_SR1_OPP100_MARGIN                0
+#define AM33XX_SR1_OPP100_CNTRL_OFFSET		0x0774
+#define AM33XX_SR1_OPP100_EVM_ERR_MIN_LIMIT	0xFB
+#define AM33XX_SR1_OPP100_BB_ERR_MIN_LIMIT	0xDF
+#define AM33XX_SR1_OPP100_ERR_MAX_LIMIT		0x2
+#define AM33XX_SR1_OPP100_ERR_WEIGHT		0x4
+#define AM33XX_SR1_OPP100_MARGIN		0
 
-#define AM33XX_SR1_OPP120_CNTRL_OFFSET         0x0778
-#define AM33XX_SR1_OPP120_EVM_ERR2VOLT_GAIN    0xB
-#define AM33XX_SR1_OPP120_EVM_ERR_MIN_LIMIT    0xF4
-#define AM33XX_SR1_OPP120_BB_ERR2VOLT_GAIN     0x5
-#define AM33XX_SR1_OPP120_BB_ERR_MIN_LIMIT     0xE6
-#define AM33XX_SR1_OPP120_ERR_MAX_LIMIT                0x2
-#define AM33XX_SR1_OPP120_ERR_WEIGHT            0x4
-#define AM33XX_SR1_OPP120_MARGIN                0
+#define AM33XX_SR1_OPP120_CNTRL_OFFSET		0x0778
+#define AM33XX_SR1_OPP120_EVM_ERR_MIN_LIMIT	0xFC
+#define AM33XX_SR1_OPP120_BB_ERR_MIN_LIMIT	0xE6
+#define AM33XX_SR1_OPP120_ERR_MAX_LIMIT		0x2
+#define AM33XX_SR1_OPP120_ERR_WEIGHT		0x7
+#define AM33XX_SR1_OPP120_MARGIN		0
 
-#define AM33XX_SR1_OPPTURBO_CNTRL_OFFSET        0x077C
-#define AM33XX_SR1_OPPTURBO_EVM_ERR2VOLT_GAIN  0xC
-#define AM33XX_SR1_OPPTURBO_EVM_ERR_MIN_LIMIT  0xF5
-#define AM33XX_SR1_OPPTURBO_BB_ERR2VOLT_GAIN   0x6
-#define AM33XX_SR1_OPPTURBO_BB_ERR_MIN_LIMIT   0xEA
-#define AM33XX_SR1_OPPTURBO_ERR_MAX_LIMIT      0x2
-#define AM33XX_SR1_OPPTURBO_ERR_WEIGHT          0x4
-#define AM33XX_SR1_OPPTURBO_MARGIN              0
+#define AM33XX_SR1_OPPTURBO_CNTRL_OFFSET	0x077C
+#define AM33XX_SR1_OPPTURBO_EVM_ERR_MIN_LIMIT	0xFD
+#define AM33XX_SR1_OPPTURBO_BB_ERR_MIN_LIMIT	0xEA
+#define AM33XX_SR1_OPPTURBO_ERR_MAX_LIMIT	0x2
+#define AM33XX_SR1_OPPTURBO_ERR_WEIGHT		0x7
+#define AM33XX_SR1_OPPTURBO_MARGIN		0
+
+/* bits 31:16 = SenP margin; bit 15:0 = SenN margin */
+
+#define AM33XX_SR1_OPPNITRO_MARGIN		0x018B019A
 
 /* the voltages and frequencies should probably be defined in opp3xxx_data.c.
    Once SR is integrated to the mainline driver, and voltdm is working
    correctly in AM335x, these can be removed.  */
-#define AM33XX_VDD_MPU_OPP50_UV                950000
-#define AM33XX_VDD_MPU_OPP100_UV       1100000
-#define AM33XX_VDD_MPU_OPP120_UV       1200000
-#define AM33XX_VDD_MPU_OPPTURBO_UV     1260000
-#define AM33XX_VDD_CORE_OPP50_UV        950000
-#define AM33XX_VDD_CORE_OPP100_UV       1100000
+#define AM33XX_VDD_MPU_OPP50_UV			950000
+#define AM33XX_VDD_MPU_OPP100_UV		1100000
+#define AM33XX_VDD_MPU_OPP120_UV		1200000
+#define AM33XX_VDD_MPU_OPPTURBO_UV		1260000
+#define AM33XX_VDD_CORE_OPP50_UV		950000
+#define AM33XX_VDD_CORE_OPP100_UV		1100000
 
-#define AM33XX_VDD_MPU_OPP50_FREQ      275000000
-#define AM33XX_VDD_MPU_OPP100_FREQ     500000000
-#define AM33XX_VDD_MPU_OPP120_FREQ     600000000
-#define AM33XX_VDD_MPU_OPPTURBO_FREQ   720000000
+#define AM33XX_VDD_MPU_OPP50_FREQ		275000000
+#define AM33XX_VDD_MPU_OPP100_FREQ		500000000
+#define AM33XX_VDD_MPU_OPP120_FREQ		600000000
+#define AM33XX_VDD_MPU_OPPTURBO_FREQ		720000000
+
+#define AM33XX_ES2_0_VDD_MPU_OPP50_UV		950000
+#define AM33XX_ES2_0_VDD_MPU_OPP100_UV		1100000
+#define AM33XX_ES2_0_VDD_MPU_OPP120_UV		1200000
+#define AM33XX_ES2_0_VDD_MPU_OPPTURBO_UV	1260000
+#define AM33XX_ES2_0_VDD_MPU_OPPNITRO_UV	1320000
+
+#define AM33XX_ES2_0_VDD_MPU_OPP50_FREQ		300000000
+#define AM33XX_ES2_0_VDD_MPU_OPP100_FREQ	600000000
+#define AM33XX_ES2_0_VDD_MPU_OPP120_FREQ	720000000
+#define AM33XX_ES2_0_VDD_MPU_OPPTURBO_FREQ	800000000
+#define AM33XX_ES2_0_VDD_MPU_OPPNITRO_FREQ	1000000000
+
+static struct am33xx_sr_opp_data sr1_opp_data_2_0[] = {
+	{
+		.efuse_offs	= AM33XX_SR1_OPP50_CNTRL_OFFSET,
+		.e2v_gain	= 0,
+		.err_minlimit	= AM33XX_SR1_OPP50_EVM_ERR_MIN_LIMIT,
+		.err_maxlimit	= AM33XX_SR1_OPP50_ERR_MAX_LIMIT,
+		.err_weight	= AM33XX_SR1_OPP50_ERR_WEIGHT,
+		.margin		= AM33XX_SR1_OPP50_MARGIN,
+		.nominal_volt	= AM33XX_ES2_0_VDD_MPU_OPP50_UV,
+		.frequency	= AM33XX_ES2_0_VDD_MPU_OPP50_FREQ,
+	},
+	{
+		.efuse_offs	= AM33XX_SR1_OPP100_CNTRL_OFFSET,
+		.e2v_gain	= 0,
+		.err_minlimit	= AM33XX_SR1_OPP100_EVM_ERR_MIN_LIMIT,
+		.err_maxlimit	= AM33XX_SR1_OPP100_ERR_MAX_LIMIT,
+		.err_weight	= AM33XX_SR1_OPP100_ERR_WEIGHT,
+		.margin		= AM33XX_SR1_OPP100_MARGIN,
+		.nominal_volt	= AM33XX_ES2_0_VDD_MPU_OPP100_UV,
+		.frequency	= AM33XX_ES2_0_VDD_MPU_OPP100_FREQ,
+	},
+	{
+		.efuse_offs	= AM33XX_SR1_OPP120_CNTRL_OFFSET,
+		.e2v_gain	= 0,
+		.err_minlimit	= AM33XX_SR1_OPP120_EVM_ERR_MIN_LIMIT,
+		.err_maxlimit	= AM33XX_SR1_OPP120_ERR_MAX_LIMIT,
+		.err_weight	= AM33XX_SR1_OPP120_ERR_WEIGHT,
+		.margin		= AM33XX_SR1_OPP120_MARGIN,
+		.nominal_volt	= AM33XX_ES2_0_VDD_MPU_OPP120_UV,
+		.frequency	= AM33XX_ES2_0_VDD_MPU_OPP120_FREQ,
+	},
+	{
+		.efuse_offs     = AM33XX_SR1_OPPTURBO_CNTRL_OFFSET,
+		.e2v_gain       = 0,
+		.err_minlimit   = AM33XX_SR1_OPPTURBO_EVM_ERR_MIN_LIMIT,
+		.err_maxlimit   = AM33XX_SR1_OPPTURBO_ERR_MAX_LIMIT,
+		.err_weight     = AM33XX_SR1_OPPTURBO_ERR_WEIGHT,
+		.margin		= AM33XX_SR1_OPPTURBO_MARGIN,
+		.nominal_volt	= AM33XX_ES2_0_VDD_MPU_OPPTURBO_UV,
+		.frequency	= AM33XX_ES2_0_VDD_MPU_OPPTURBO_FREQ,
+	},
+	{
+		/* NITRO can use the TURBO data, except for margin */
+		.efuse_offs     = AM33XX_SR1_OPPTURBO_CNTRL_OFFSET,
+		.e2v_gain       = 0,
+		.err_minlimit   = AM33XX_SR1_OPPTURBO_EVM_ERR_MIN_LIMIT,
+		.err_maxlimit   = AM33XX_SR1_OPPTURBO_ERR_MAX_LIMIT,
+		.err_weight     = AM33XX_SR1_OPPTURBO_ERR_WEIGHT,
+		.margin		= AM33XX_SR1_OPPNITRO_MARGIN,
+		.nominal_volt	= AM33XX_ES2_0_VDD_MPU_OPPNITRO_UV,
+		.frequency	= AM33XX_ES2_0_VDD_MPU_OPPNITRO_FREQ,
+	},
+};
 
 static struct am33xx_sr_opp_data sr1_opp_data[] = {
-        {
-                .efuse_offs    = AM33XX_SR1_OPP50_CNTRL_OFFSET,
-               .e2v_gain       = AM33XX_SR1_OPP50_EVM_ERR2VOLT_GAIN,
-               .err_minlimit   = AM33XX_SR1_OPP50_EVM_ERR_MIN_LIMIT,
-               .err_maxlimit   = AM33XX_SR1_OPP50_ERR_MAX_LIMIT,
-               .err_weight     = AM33XX_SR1_OPP50_ERR_WEIGHT,
-                .margin         = AM33XX_SR1_OPP50_MARGIN,
-                .nominal_volt   = AM33XX_VDD_MPU_OPP50_UV,
-                .frequency      = AM33XX_VDD_MPU_OPP50_FREQ,
-        },
-        {
-                .efuse_offs    = AM33XX_SR1_OPP100_CNTRL_OFFSET,
-               .e2v_gain       = AM33XX_SR1_OPP100_EVM_ERR2VOLT_GAIN,
-               .err_minlimit   = AM33XX_SR1_OPP100_EVM_ERR_MIN_LIMIT,
-               .err_maxlimit   = AM33XX_SR1_OPP100_ERR_MAX_LIMIT,
-               .err_weight     = AM33XX_SR1_OPP100_ERR_WEIGHT,
-                .margin         = AM33XX_SR1_OPP100_MARGIN,
-                .nominal_volt   = AM33XX_VDD_MPU_OPP100_UV,
-                .frequency      = AM33XX_VDD_MPU_OPP100_FREQ,
-        },
-        {
-                .efuse_offs    = AM33XX_SR1_OPP120_CNTRL_OFFSET,
-               .e2v_gain       = AM33XX_SR1_OPP120_EVM_ERR2VOLT_GAIN,
-               .err_minlimit   = AM33XX_SR1_OPP120_EVM_ERR_MIN_LIMIT,
-               .err_maxlimit   = AM33XX_SR1_OPP120_ERR_MAX_LIMIT,
-               .err_weight     = AM33XX_SR1_OPP120_ERR_WEIGHT,
-                .margin         = AM33XX_SR1_OPP120_MARGIN,
-                .nominal_volt   = AM33XX_VDD_MPU_OPP120_UV,
-                .frequency      = AM33XX_VDD_MPU_OPP120_FREQ,
-        },
-        {
-                .efuse_offs    = AM33XX_SR1_OPPTURBO_CNTRL_OFFSET,
-               .e2v_gain       = AM33XX_SR1_OPPTURBO_EVM_ERR2VOLT_GAIN,
-               .err_minlimit   = AM33XX_SR1_OPPTURBO_EVM_ERR_MIN_LIMIT,
-               .err_maxlimit   = AM33XX_SR1_OPPTURBO_ERR_MAX_LIMIT,
-               .err_weight     = AM33XX_SR1_OPPTURBO_ERR_WEIGHT,
-                .margin         = AM33XX_SR1_OPPTURBO_MARGIN,
-                .nominal_volt   = AM33XX_VDD_MPU_OPPTURBO_UV,
-                .frequency      = AM33XX_VDD_MPU_OPPTURBO_FREQ,
-        },
+	{
+		.efuse_offs     = AM33XX_SR1_OPP50_CNTRL_OFFSET,
+		.e2v_gain       = 0,
+		.err_minlimit   = AM33XX_SR1_OPP50_EVM_ERR_MIN_LIMIT,
+		.err_maxlimit   = AM33XX_SR1_OPP50_ERR_MAX_LIMIT,
+		.err_weight     = AM33XX_SR1_OPP50_ERR_WEIGHT,
+		.margin		= AM33XX_SR1_OPP50_MARGIN,
+		.nominal_volt	= AM33XX_VDD_MPU_OPP50_UV,
+		.frequency	= AM33XX_VDD_MPU_OPP50_FREQ,
+	},
+	{
+		.efuse_offs     = AM33XX_SR1_OPP100_CNTRL_OFFSET,
+		.e2v_gain       = 0,
+		.err_minlimit   = AM33XX_SR1_OPP100_EVM_ERR_MIN_LIMIT,
+		.err_maxlimit   = AM33XX_SR1_OPP100_ERR_MAX_LIMIT,
+		.err_weight     = AM33XX_SR1_OPP100_ERR_WEIGHT,
+		.margin		= AM33XX_SR1_OPP100_MARGIN,
+		.nominal_volt	= AM33XX_VDD_MPU_OPP100_UV,
+		.frequency	= AM33XX_VDD_MPU_OPP100_FREQ,
+	},
+	{
+		.efuse_offs	= AM33XX_SR1_OPP120_CNTRL_OFFSET,
+		.e2v_gain       = 0,
+		.err_minlimit   = AM33XX_SR1_OPP120_EVM_ERR_MIN_LIMIT,
+		.err_maxlimit   = AM33XX_SR1_OPP120_ERR_MAX_LIMIT,
+		.err_weight     = AM33XX_SR1_OPP120_ERR_WEIGHT,
+		.margin		= AM33XX_SR1_OPP120_MARGIN,
+		.nominal_volt	= AM33XX_VDD_MPU_OPP120_UV,
+		.frequency	= AM33XX_VDD_MPU_OPP120_FREQ,
+	},
+	{
+		.efuse_offs	= AM33XX_SR1_OPPTURBO_CNTRL_OFFSET,
+		.e2v_gain       = 0,
+		.err_minlimit   = AM33XX_SR1_OPPTURBO_EVM_ERR_MIN_LIMIT,
+		.err_maxlimit   = AM33XX_SR1_OPPTURBO_ERR_MAX_LIMIT,
+		.err_weight     = AM33XX_SR1_OPPTURBO_ERR_WEIGHT,
+		.margin		= AM33XX_SR1_OPPTURBO_MARGIN,
+		.nominal_volt	= AM33XX_VDD_MPU_OPPTURBO_UV,
+		.frequency	= AM33XX_VDD_MPU_OPPTURBO_FREQ,
+	},
 };
 
 static struct am33xx_sr_opp_data sr0_opp_data[] = {
-        {
-                .efuse_offs    = AM33XX_SR0_OPP50_CNTRL_OFFSET,
-               .e2v_gain       = AM33XX_SR0_OPP50_EVM_ERR2VOLT_GAIN,
-               .err_minlimit   = AM33XX_SR0_OPP50_EVM_ERR_MIN_LIMIT,
-               .err_maxlimit   = AM33XX_SR0_OPP50_ERR_MAX_LIMIT,
-               .err_weight     = AM33XX_SR0_OPP50_ERR_WEIGHT,
-                .margin         = AM33XX_SR0_OPP50_MARGIN,
-                .nominal_volt   = AM33XX_VDD_CORE_OPP50_UV,
-        },
-        {
-                .efuse_offs    = AM33XX_SR0_OPP100_CNTRL_OFFSET,
-               .e2v_gain       = AM33XX_SR0_OPP100_EVM_ERR2VOLT_GAIN,
-               .err_minlimit   = AM33XX_SR0_OPP100_EVM_ERR_MIN_LIMIT,
-               .err_maxlimit   = AM33XX_SR0_OPP100_ERR_MAX_LIMIT,
-               .err_weight     = AM33XX_SR0_OPP100_ERR_WEIGHT,
-                .margin         = AM33XX_SR0_OPP100_MARGIN,
-                .nominal_volt   = AM33XX_VDD_CORE_OPP100_UV,
-        },
+	{
+		.efuse_offs     = AM33XX_SR0_OPP50_CNTRL_OFFSET,
+		.e2v_gain       = 0,
+		.err_minlimit   = AM33XX_SR0_OPP50_EVM_ERR_MIN_LIMIT,
+		.err_maxlimit   = AM33XX_SR0_OPP50_ERR_MAX_LIMIT,
+		.err_weight     = AM33XX_SR0_OPP50_ERR_WEIGHT,
+		.margin		= AM33XX_SR0_OPP50_MARGIN,
+		.nominal_volt	= AM33XX_VDD_CORE_OPP50_UV,
+	},
+	{
+		.efuse_offs     = AM33XX_SR0_OPP100_CNTRL_OFFSET,
+		.e2v_gain       = 0,
+		.err_minlimit   = AM33XX_SR0_OPP100_EVM_ERR_MIN_LIMIT,
+		.err_maxlimit   = AM33XX_SR0_OPP100_ERR_MAX_LIMIT,
+		.err_weight     = AM33XX_SR0_OPP100_ERR_WEIGHT,
+		.margin		= AM33XX_SR0_OPP100_MARGIN,
+		.nominal_volt	= AM33XX_VDD_CORE_OPP100_UV,
+	},
+};
+
+static struct am33xx_sr_sdata sr_sensor_data_2_0[] = {
+	{
+		.sr_opp_data	= sr0_opp_data,
+		/* note that OPP50 is NOT used in Linux kernel for AM335x */
+		.no_of_opps	= 0x2,
+		.default_opp	= 0x1,
+		.senn_mod       = 0x1,
+		.senp_mod       = 0x1,
+	},
+	{
+		.sr_opp_data    = sr1_opp_data_2_0,
+		/* the opp data below should be determined
+		   dynamically during SR probe */
+		.no_of_opps	= 0x5,
+		.default_opp	= 0x3,
+		.senn_mod       = 0x1,
+		.senp_mod       = 0x1,
+	},
 };
 
 static struct am33xx_sr_sdata sr_sensor_data[] = {
-       {
-                .sr_opp_data    = sr0_opp_data,
-                /* note that OPP50 is NOT used in Linux kernel for AM335x */
-                .no_of_opps     = 0x2,
-                .default_opp    = 0x1,
-               .senn_mod       = 0x1,
-               .senp_mod       = 0x1,
-       },
-       {
-               .sr_opp_data    = sr1_opp_data,
-                /* the opp data below should be determined 
-                   dynamically during SR probe */
-                .no_of_opps     = 0x4,
-                .default_opp    = 0x3,
-               .senn_mod       = 0x1,
-               .senp_mod       = 0x1,
-       },
+	{
+		.sr_opp_data	= sr0_opp_data,
+		/* note that OPP50 is NOT used in Linux kernel for AM335x */
+		.no_of_opps	= 0x2,
+		.default_opp	= 0x1,
+		.senn_mod       = 0x1,
+		.senp_mod       = 0x1,
+	},
+	{
+		.sr_opp_data    = sr1_opp_data,
+		/* the opp data below should be determined
+		   dynamically during SR probe */
+		.no_of_opps	= 0x4,
+		.default_opp	= 0x3,
+		.senn_mod       = 0x1,
+		.senp_mod       = 0x1,
+	},
 };
 
 static struct am33xx_sr_platform_data am33xx_sr_pdata = {
-       .vd_name[0]             = "vdd_core",
-        .vd_name[1]             = "vdd_mpu",
-       .ip_type                = 2,
-        .irq_delay              = 1000,
-       .no_of_vds              = 2,
-       .no_of_sens             = ARRAY_SIZE(sr_sensor_data),
-       .vstep_size_uv          = 12500,
-       .enable_on_init         = true,
-       .sr_sdata               = sr_sensor_data,
+	.vd_name[0]		= "vdd_core",
+	.vd_name[1]		= "vdd_mpu",
+	.ip_type		= 2,
+	.irq_delay		= 1000,
+	.no_of_vds		= 2,
+	.no_of_sens		= ARRAY_SIZE(sr_sensor_data),
+	.vstep_size_uv		= 12500,
+	.enable_on_init		= true,
+	.sr_sdata		= sr_sensor_data,
 };
 
 static struct resource am33xx_sr_resources[] = {
-       {
-               .name   =       "smartreflex0",
-               .start  =       AM33XX_SR0_BASE,
-               .end    =       AM33XX_SR0_BASE + SZ_4K - 1,
-               .flags  =       IORESOURCE_MEM,
-       },
-       {
-               .name   =       "smartreflex0",
-               .start  =       AM33XX_IRQ_SMARTREFLEX0,
-               .end    =       AM33XX_IRQ_SMARTREFLEX0,
-               .flags  =       IORESOURCE_IRQ,
-       },
-       {
-               .name   =       "smartreflex1",
-               .start  =       AM33XX_SR1_BASE,
-               .end    =       AM33XX_SR1_BASE + SZ_4K - 1,
-               .flags  =       IORESOURCE_MEM,
-       },
-       {
-               .name   =       "smartreflex1",
-               .start  =       AM33XX_IRQ_SMARTREFLEX1,
-               .end    =       AM33XX_IRQ_SMARTREFLEX1,
-               .flags  =       IORESOURCE_IRQ,
-       },
+	{
+		.name   =       "smartreflex0",
+		.start  =       AM33XX_SR0_BASE,
+		.end    =       AM33XX_SR0_BASE + SZ_4K - 1,
+		.flags  =       IORESOURCE_MEM,
+	},
+	{
+		.name   =       "smartreflex0",
+		.start  =       AM33XX_IRQ_SMARTREFLEX0,
+		.end    =       AM33XX_IRQ_SMARTREFLEX0,
+		.flags  =       IORESOURCE_IRQ,
+	},
+	{
+		.name   =       "smartreflex1",
+		.start  =       AM33XX_SR1_BASE,
+		.end    =       AM33XX_SR1_BASE + SZ_4K - 1,
+		.flags  =       IORESOURCE_MEM,
+	},
+	{
+		.name   =       "smartreflex1",
+		.start  =       AM33XX_IRQ_SMARTREFLEX1,
+		.end    =       AM33XX_IRQ_SMARTREFLEX1,
+		.flags  =       IORESOURCE_IRQ,
+	},
 };
 
 /* VCORE for SR regulator init */
 static struct platform_device am33xx_sr_device = {
-       .name           = "smartreflex",
-       .id             = -1,
-       .num_resources  = ARRAY_SIZE(am33xx_sr_resources),
-       .resource       = am33xx_sr_resources,
-       .dev = {
-               .platform_data = &am33xx_sr_pdata,
-       },
+	.name	       = "smartreflex",
+	.id	       = -1,
+	.num_resources  = ARRAY_SIZE(am33xx_sr_resources),
+	.resource       = am33xx_sr_resources,
+	.dev = {
+	       .platform_data = &am33xx_sr_pdata,
+	},
 };
 
 void __init am33xx_sr_init(void)
 {
-        /* For beaglebone, update voltage step size and related parameters 
-           appropriately.  All other AM33XX platforms are good with the 
-           structure defaults as initialized above. */
-        if ((am33xx_evmid == BEAGLE_BONE_OLD) || 
-                        (am33xx_evmid == BEAGLE_BONE_A3)) {
-                printk(KERN_ERR "address of pdata = %08x\n", (u32)&am33xx_sr_pdata);
-                am33xx_sr_pdata.vstep_size_uv = 25000;
-                /* CORE */
-                sr0_opp_data[0].e2v_gain     = AM33XX_SR0_OPP50_BB_ERR2VOLT_GAIN;
-                sr0_opp_data[0].err_minlimit = AM33XX_SR0_OPP50_BB_ERR_MIN_LIMIT;
-                sr0_opp_data[1].e2v_gain     = AM33XX_SR0_OPP100_BB_ERR2VOLT_GAIN;
-                sr0_opp_data[1].err_minlimit = AM33XX_SR0_OPP100_BB_ERR_MIN_LIMIT;
-                /* MPU */
-                sr1_opp_data[0].e2v_gain     = AM33XX_SR1_OPP50_BB_ERR2VOLT_GAIN;
-                sr1_opp_data[0].err_minlimit = AM33XX_SR1_OPP50_BB_ERR_MIN_LIMIT;
-                sr1_opp_data[1].e2v_gain     = AM33XX_SR1_OPP100_BB_ERR2VOLT_GAIN;
-                sr1_opp_data[1].err_minlimit = AM33XX_SR1_OPP100_BB_ERR_MIN_LIMIT;
-                sr1_opp_data[2].e2v_gain     = AM33XX_SR1_OPP120_BB_ERR2VOLT_GAIN;
-                sr1_opp_data[2].err_minlimit = AM33XX_SR1_OPP120_BB_ERR_MIN_LIMIT;
-                sr1_opp_data[3].e2v_gain     = AM33XX_SR1_OPPTURBO_BB_ERR2VOLT_GAIN;
-                sr1_opp_data[3].err_minlimit = AM33XX_SR1_OPPTURBO_BB_ERR_MIN_LIMIT;
-        }
+	if (omap_rev() != AM335X_REV_ES1_0)
+		am33xx_sr_pdata.sr_sdata = sr_sensor_data_2_0;
 
-       if (platform_device_register(&am33xx_sr_device))
-               printk(KERN_ERR "failed to register am33xx_sr device\n");
-       else
-               printk(KERN_INFO "registered am33xx_sr device\n");
+	/* For beaglebone, update voltage step size and related parameters
+	   appropriately.  All other AM33XX platforms are good with the
+	   structure defaults as initialized above. */
+	if ((am33xx_evmid == BEAGLE_BONE_OLD) ||
+			(am33xx_evmid == BEAGLE_BONE_A3)) {
+		printk(KERN_ERR "address of pdata = %08x\n",
+			(u32)&am33xx_sr_pdata);
+
+		am33xx_sr_pdata.vstep_size_uv = 25000;
+	}
+
+	if (platform_device_register(&am33xx_sr_device))
+		printk(KERN_ERR "failed to register am33xx_sr device\n");
+	else
+		printk(KERN_INFO "registered am33xx_sr device\n");
 }
 #else
 inline void am33xx_sr_init(void) {}
@@ -1580,6 +1562,7 @@ static int __init omap2_init_devices(void)
 	omap_init_sti();
 	omap_init_sham();
 	omap_init_aes();
+	omap_init_rng();
 	omap_init_vout();
 	am33xx_register_edma();
 	am33xx_init_pcm();
@@ -1600,13 +1583,13 @@ arch_initcall(omap2_init_devices);
 /* TODO : Verify the offsets */
 static struct cpsw_slave_data am33xx_cpsw_slaves[] = {
 	{
-		.slave_reg_ofs  = 0x208,
+		.slave_reg_ofs  = 0x200,
 		.sliver_reg_ofs = 0xd80,
 		.phy_id		= "0:00",
 		.dual_emac_reserved_vlan = CPSW_PORT_VLAN_SLAVE_0,
 	},
 	{
-		.slave_reg_ofs  = 0x308,
+		.slave_reg_ofs  = 0x300,
 		.sliver_reg_ofs = 0xdc0,
 		.phy_id		= "0:01",
 		.dual_emac_reserved_vlan = CPSW_PORT_VLAN_SLAVE_1,
@@ -1623,6 +1606,9 @@ static struct cpsw_platform_data am33xx_cpsw_pdata = {
 	.ale_entries		= 1024,
 	.host_port_reg_ofs      = 0x108,
 	.hw_stats_reg_ofs       = 0x900,
+	.cpts_reg_ofs		= 0xc00,
+	.cpts_clock_mult	= 0x80000000,
+	.cpts_clock_shift	= 29,
 	.bd_ram_ofs		= 0x2000,
 	.bd_ram_size		= SZ_8K,
 	.rx_descs               = 64,
@@ -1711,6 +1697,8 @@ int am33xx_cpsw_init(enum am33xx_cpsw_mac_mode mode, unsigned char *phy_id0,
 		break;
 	case AM33XX_CPSW_MODE_RGMII:
 		gmii_sel = AM33XX_RGMII_MODE_EN;
+		am33xx_cpsw_slaves[0].phy_if = PHY_INTERFACE_MODE_RGMII;
+		am33xx_cpsw_slaves[1].phy_if = PHY_INTERFACE_MODE_RGMII;
 		break;
 	default:
 		return -EINVAL;
@@ -1850,4 +1838,24 @@ int __init omap_init_gpmc(struct gpmc_devices_info *pdata, int pdata_len)
 	}
 
 	return 0;
+}
+
+void __init am33xx_gpu_init(void)
+{
+	int id = -1;
+	struct platform_device *pdev;
+	struct omap_hwmod *oh;
+	char *oh_name = "gfx";
+	char *dev_name = "pvrsrvkm";
+
+	oh = omap_hwmod_lookup(oh_name);
+	if (!oh) {
+		pr_err("Could not find %s hwmod data\n", oh_name);
+		return;
+	}
+
+	pdev = omap_device_build(dev_name, id, oh, NULL, 0, NULL, 0, 0);
+
+	WARN(IS_ERR(pdev), "could not build omap_device for %s\n", oh_name);
+
 }

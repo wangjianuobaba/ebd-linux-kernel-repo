@@ -49,7 +49,7 @@ dummy:
 	@echo "    sudo make ocf_install"
 	@echo ""
 	@exit 1
-	
+
 $(list-multi) dummy1: $(ocf-objs)
 	$(LD) -r -o $@ $(ocf-objs)
 

@@ -19,7 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#define DEBUG
+
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/ioctl.h>
@@ -576,7 +576,7 @@ static int __devinit spidev_probe(struct spi_device *spi)
 	struct spidev_data	*spidev;
 	int			status;
 	unsigned long		minor;
-	printk(KERN_ALERT ">>>>%s() enter!\n", __func__);
+
 	/* Allocate driver data */
 	spidev = kzalloc(sizeof(*spidev), GFP_KERNEL);
 	if (!spidev)

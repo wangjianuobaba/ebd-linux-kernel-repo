@@ -5,7 +5,7 @@
  * since it does no crypto at all.
  *
  * Written by David McCullough <david_mccullough@mcafee.com>
- * Copyright (C) 2006-2010 David McCullough 
+ * Copyright (C) 2006-2010 David McCullough
  *
  * LICENSE TERMS
  *

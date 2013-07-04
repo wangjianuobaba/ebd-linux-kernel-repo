@@ -770,13 +770,13 @@ int random_input_wait(void)
 {
 	int count;
 
-	wait_event_interruptible(random_write_wait, 
+	wait_event_interruptible(random_write_wait,
 			 input_pool.entropy_count < random_write_wakeup_thresh);
 
 	count = random_write_wakeup_thresh - input_pool.entropy_count;
 
         /* likely we got woken up due to a signal */
-	if (count <= 0) count = random_read_wakeup_thresh; 
+	if (count <= 0) count = random_read_wakeup_thresh;
 
 	DEBUG_ENT("requesting %d bits from input_wait()er %d<%d\n",
 		  count,

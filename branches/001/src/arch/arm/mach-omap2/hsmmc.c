@@ -9,7 +9,6 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/string.h>
@@ -524,10 +523,8 @@ void __init omap2_hsmmc_init(struct omap2_hsmmc_info *controllers)
 		omap4_ctrl_pad_writel(reg, control_mmc1);
 	}
 
-	for (; controllers->mmc; controllers++){
+	for (; controllers->mmc; controllers++)
 		omap_init_hsmmc(controllers, controllers->mmc);
-		pr_debug(">>>>%s: initialize mmc num= %d", __func__, controllers->mmc);
-	}
 
 }
 

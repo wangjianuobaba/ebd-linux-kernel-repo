@@ -80,7 +80,6 @@ struct omap4_aes_dev {
 	struct list_head		list;
 	unsigned long			phys_base;
 	void __iomem			*io_base;
-	struct clk			*iclk;
 	struct omap4_aes_ctx		*ctx;
 	struct device			*dev;
 	unsigned long			flags;
@@ -146,7 +145,7 @@ static void omap4_aes_write_n(struct omap4_aes_dev *dd, u32 offset,
 
 static int omap4_aes_hw_init(struct omap4_aes_dev *dd)
 {
-	omap4_aes_write(dd, AES_REG_SYSCFG, 0);
+	pm_runtime_get_sync(dd->dev);
 
 	if (!(dd->flags & FLAGS_INIT)) {
 		dd->flags |= FLAGS_INIT;
@@ -489,9 +488,15 @@ static void omap4_aes_finish_req(struct omap4_aes_dev *dd, int err)
 
 	pr_debug("err: %d\n", err);
 
+	pm_runtime_put_sync(dd->dev);
 	dd->flags &= ~FLAGS_BUSY;
 
 	req->base.complete(&req->base, err);
+}
+
+static void omap4_aes_dma_stop(struct omap4_aes_dev *dd)
+{
+	omap4_aes_write_mask(dd, AES_REG_SYSCFG, 0, AES_REG_SYSCFG_DREQ_MASK);
 }
 
 static int omap4_aes_crypt_dma_stop(struct omap4_aes_dev *dd)
@@ -501,7 +506,7 @@ static int omap4_aes_crypt_dma_stop(struct omap4_aes_dev *dd)
 
 	pr_debug("total: %d\n", dd->total);
 
-	omap4_aes_write_mask(dd, AES_REG_SYSCFG, 0, AES_REG_SYSCFG_DREQ_MASK);
+	omap4_aes_dma_stop(dd);
 
 	edma_stop(dd->dma_lch_in);
 	edma_clean_channel(dd->dma_lch_in);
@@ -795,15 +800,13 @@ static int omap4_aes_probe(struct platform_device *pdev)
 	crypto_init_queue(&dd->queue, AM33X_AES_QUEUE_LENGTH);
 
 	/* Get the base address */
-	//res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	//if (!res) {
-	//	dev_err(dev, "invalid resource type\n");
-	//	err = -ENODEV;
-	//	goto err_res;
-	//}
-
-	//dd->phys_base = res->start;
-	dd->phys_base = AM33XX_AES0_P_BASE;
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(dev, "invalid resource type\n");
+		err = -ENODEV;
+		goto err_data;
+	}
+	dd->phys_base = res->start;
 
 	/* Get the DMA */
 	res = platform_get_resource(pdev, IORESOURCE_DMA, 0);
@@ -819,21 +822,22 @@ static int omap4_aes_probe(struct platform_device *pdev)
 	else
 		dd->dma_in = res->start;
 
-	pm_runtime_enable(dev);
-	udelay(1);
-	pm_runtime_get_sync(dev);
-	udelay(1);
-
 	dd->io_base = ioremap(dd->phys_base, SZ_4K);
 	if (!dd->io_base) {
 		dev_err(dev, "can't ioremap\n");
 		err = -ENOMEM;
-		goto err_io;
+		goto err_data;
 	}
 
-	omap4_aes_hw_init(dd);
+	pm_runtime_enable(dev);
+	pm_runtime_get_sync(dev);
+
+	omap4_aes_dma_stop(dd);
+
 	reg = omap4_aes_read(dd, AES_REG_REV);
-	
+
+	pm_runtime_put_sync(dev);
+
 	dev_info(dev, "AM33X AES hw accel rev: %u.%02u\n",
 		 ((reg & AES_REG_REV_X_MAJOR_MASK) >> 8),
 		 (reg & AES_REG_REV_Y_MINOR_MASK));
@@ -870,17 +874,8 @@ err_dma:
 	tasklet_kill(&dd->done_task);
 	tasklet_kill(&dd->queue_task);
 	iounmap(dd->io_base);
-
-err_io:
-	pm_runtime_put_sync(dev);
-	udelay(1);
 	pm_runtime_disable(dev);
-	udelay(1);
 
-
-//err_res:
-	//kfree(dd);
-	//dd = NULL;
 err_data:
 	dev_err(dev, "initialization failed.\n");
 	return err;
@@ -905,11 +900,7 @@ static int omap4_aes_remove(struct platform_device *pdev)
 	tasklet_kill(&dd->queue_task);
 	omap4_aes_dma_cleanup(dd);
 	iounmap(dd->io_base);
-	pm_runtime_put_sync(&pdev->dev);
-	udelay(1);
 	pm_runtime_disable(&pdev->dev);
-	udelay(1);
-
 	kfree(dd);
 	dd = NULL;
 
@@ -918,24 +909,19 @@ static int omap4_aes_remove(struct platform_device *pdev)
 
 static int omap4_aes_suspend(struct device *dev)
 {
-	pr_debug("#### Crypto: Suspend call ####\n");
-
+	pm_runtime_put_sync(dev);
 	return 0;
 }
 
 
 static int omap4_aes_resume(struct device *dev)
 {
-	pr_debug("#### Crypto: resume call ####\n");
-
+	pm_runtime_get_sync(dev);
 	return 0;
 }
 
 static struct dev_pm_ops omap4_aes_dev_pm_ops = {
-	.suspend	= omap4_aes_suspend,
-	.resume		= omap4_aes_resume,
-	.runtime_suspend = omap4_aes_suspend,
-	.runtime_resume = omap4_aes_resume,
+	SET_SYSTEM_SLEEP_PM_OPS(omap4_aes_suspend, omap4_aes_resume)
 };
 
 static struct platform_driver omap4_aes_driver = {
@@ -944,7 +930,7 @@ static struct platform_driver omap4_aes_driver = {
 	.driver	= {
 		.name	= "omap4-aes",
 		.owner	= THIS_MODULE,
-		.pm		= &omap4_aes_dev_pm_ops
+		.pm	= &omap4_aes_dev_pm_ops
 	},
 };
 

@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#define DEBUG
+
 #include <linux/kernel.h>
 #include <linux/device.h>
 #include <linux/init.h>

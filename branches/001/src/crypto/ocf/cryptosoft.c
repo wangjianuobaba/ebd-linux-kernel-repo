@@ -803,7 +803,7 @@ static void swcr_process_req(struct swcr_req *req)
 					offset_in_page(uiop->uio_iov[sg_num].iov_base+skip));
 				sg_len += len;
 				skip = 0;
-			} else 
+			} else
 				skip -= uiop->uio_iov[sg_num].iov_len;
 		}
 	} else {
@@ -869,7 +869,7 @@ static void swcr_process_req(struct swcr_req *req)
 	case SW_TYPE_ABLKCIPHER: {
 		int ret;
 		unsigned char *ivp = req->iv;
-		int ivsize = 
+		int ivsize =
 			crypto_ablkcipher_ivsize(__crypto_ablkcipher_cast(sw->sw_tfm));
 
 		if (sg_len < crypto_ablkcipher_blocksize(
@@ -1070,7 +1070,7 @@ static void swcr_process_req(struct swcr_req *req)
 					sw->u.hmac.sw_klen);
 			crypto_hash_digest(&desc, req->sg, sg_len, result);
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19) */
-			
+
 		} else { /* SW_TYPE_HASH */
 			crypto_hash_digest(&desc, req->sg, sg_len, result);
 		}
@@ -1265,7 +1265,7 @@ cryptosoft_init(void)
 
 	for (i = 0; i < sizeof(crypto_details)/sizeof(crypto_details[0]); i++) {
 		int found;
-		
+
 		algo = crypto_details[i].alg_name;
 		if (!algo || !*algo) {
 			dprintk("%s:Algorithm %d not supported\n", __FUNCTION__, i);

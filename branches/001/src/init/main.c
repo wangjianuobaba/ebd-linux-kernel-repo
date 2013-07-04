@@ -468,7 +468,7 @@ asmlinkage void __init start_kernel(void)
 {
 	char * command_line;
 	extern const struct kernel_param __start___param[], __stop___param[];
-	printk(">>>>%s()\n",__func__);
+
 	smp_setup_processor_id();
 
 	/*

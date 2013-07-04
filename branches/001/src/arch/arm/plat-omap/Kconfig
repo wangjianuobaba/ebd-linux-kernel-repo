@@ -56,8 +56,8 @@ config AM33XX_SMARTREFLEX
 	  consumption.
 
 	  Please note, that by default SmartReflex is enabled.
-          To disable the automatic voltage compensation for 
-          vdd mpu and vdd core from user space, user must 
+          To disable the automatic voltage compensation for
+          vdd mpu and vdd core from user space, user must
           write 1 to /debug/smartreflex/autocomp.
 
 	  Optionally autocompensation can be disabled in the kernel

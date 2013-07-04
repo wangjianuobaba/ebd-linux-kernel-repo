@@ -140,6 +140,4 @@ source "drivers/hv/Kconfig"
 
 source "drivers/devfreq/Kconfig"
 
-source "drivers/iio/Kconfig"
-
 endmenu

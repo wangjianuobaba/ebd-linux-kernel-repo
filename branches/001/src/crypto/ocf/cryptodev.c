@@ -135,7 +135,7 @@ checkcrid(int crid)
 	int hid = crid & ~(CRYPTOCAP_F_SOFTWARE | CRYPTOCAP_F_HARDWARE);
 	int typ = crid & (CRYPTOCAP_F_SOFTWARE | CRYPTOCAP_F_HARDWARE);
 	int caps = 0;
-	
+
 	/* if the user hasn't selected a driver, then just call newsession */
 	if (hid == 0 && typ != 0)
 		return 0;
@@ -147,7 +147,7 @@ checkcrid(int crid)
 		dprintk("%s: hid=%x typ=%x not matched\n", __FUNCTION__, hid, typ);
 		return EINVAL;
 	}
-	
+
 	/* the user didn't specify SW or HW, so the driver is ok */
 	if (typ == 0)
 		return 0;
@@ -491,7 +491,7 @@ cryptodev_key(struct crypt_kop *kop)
 	} while ((krp->krp_flags & CRYPTO_KF_DONE) == 0);
 
 	dprintk("%s finished WAITING error=%d\n", __FUNCTION__, error);
-	
+
 	kop->crk_crid = krp->krp_crid;		/* device that did the work */
 	if (krp->krp_status != 0) {
 		error = krp->krp_status;
@@ -565,7 +565,7 @@ csedelete(struct fcrypt *fcr, struct csession *cse_del)
 	}
 	return (0);
 }
-	
+
 static struct csession *
 cseadd(struct fcrypt *fcr, struct csession *cse)
 {

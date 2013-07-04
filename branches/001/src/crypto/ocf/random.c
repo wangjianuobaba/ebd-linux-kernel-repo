@@ -303,7 +303,7 @@ random_proc(void *arg)
 #endif
 		}
 	}
-	
+
 	kfree(buf);
 
 bad_alloc:
