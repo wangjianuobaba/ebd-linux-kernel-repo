@@ -99,6 +99,11 @@ static int evm_hw_params(struct snd_pcm_substream *substream,
 	if(ret < 0){
 		return ret;
 	}
+	
+	ret = snd_soc_dai_set_clkdiv(codec_dai, WM8960_DACDIV, WM8960_DAC_DIV_1);//dacclk divided by 1
+	if(ret < 0){
+		return ret;
+	}
 
 
 #else

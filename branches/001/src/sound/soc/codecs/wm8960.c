@@ -123,7 +123,7 @@ static int wm8960_set_deemph(struct snd_soc_codec *codec)
 		val = 0;
 	}
 
-	dev_dbg(codec->dev, "Set deemphasis %d\n", val);
+	dev_dbg(codec->dev, "Set deemphasis %d Hz\n", deemph_settings[(val >> 1) & 0x03]);
 
 	return snd_soc_update_bits(codec, WM8960_DACCTL1,
 				   0x6, val);
@@ -542,6 +542,8 @@ static int wm8960_hw_params(struct snd_pcm_substream *substream,
 						    WM8960_ADDCTL3, 0x7,
 						    alc_rates[i].val);
 			pr_debug(">>>>the alc rate is %dHz.\n", alc_rates[i].rate);
+			/* added by bo, manually set record sampling rate to 16kHz */
+			snd_soc_dai_set_clkdiv(dai, WM8960_DACDIV, WM8960_DAC_DIV_3);
 			}
 	}
 
@@ -839,6 +841,10 @@ static int wm8960_set_dai_clkdiv(struct snd_soc_dai *codec_dai,
 		break;
 	case WM8960_DACDIV:
 		reg = snd_soc_read(codec, WM8960_CLOCK1) & 0x1c7;
+		snd_soc_write(codec, WM8960_CLOCK1, reg | div);
+		break;
+	case WM8960_ADCDIV:
+		reg = snd_soc_read(codec, WM8960_CLOCK1) & 0x03f;
 		snd_soc_write(codec, WM8960_CLOCK1, reg | div);
 		break;
 	case WM8960_OPCLKDIV:

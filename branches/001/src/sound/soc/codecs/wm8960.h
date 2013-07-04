@@ -76,6 +76,7 @@
 #define WM8960_OPCLKDIV			2
 #define WM8960_DCLKDIV			3
 #define WM8960_TOCLKSEL			4
+#define WM8960_ADCDIV			5
 
 #define WM8960_SYSCLK_DIV_1		(0 << 1)
 #define WM8960_SYSCLK_DIV_2		(2 << 1)
@@ -90,6 +91,15 @@
 #define WM8960_DAC_DIV_4		(4 << 3)
 #define WM8960_DAC_DIV_5_5		(5 << 3)
 #define WM8960_DAC_DIV_6		(6 << 3)
+
+//add adc clk controll, ebd-bo
+#define WM8960_ADC_DIV_1		(0 << 6)
+#define WM8960_ADC_DIV_1_5		(1 << 6)
+#define WM8960_ADC_DIV_2		(2 << 6)
+#define WM8960_ADC_DIV_3		(3 << 6)
+#define WM8960_ADC_DIV_4		(4 << 6)
+#define WM8960_ADC_DIV_5_5		(5 << 6)
+#define WM8960_ADC_DIV_6		(6 << 6)
 
 #define WM8960_DCLK_DIV_1_5		(0 << 6)
 #define WM8960_DCLK_DIV_2		(1 << 6)
