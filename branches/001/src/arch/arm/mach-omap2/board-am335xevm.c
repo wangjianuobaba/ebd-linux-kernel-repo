@@ -2596,10 +2596,9 @@ static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
 #ifdef IRTK2_ZHD
 	{am335x_rtc_init, DEV_ON_BASEBOARD, PROFILE_ALL},
 	{clkout2_enable, DEV_ON_BASEBOARD, PROFILE_ALL},
-	{mfd_tscadc_init,	DEV_ON_DGHTR_BRD, PROFILE_ALL},
 	{irtk2_gpio_keys_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{irtk2_gpio_led_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-    {mfd_tscadc_init,       DEV_ON_BASEBOARD, PROFILE_ALL},
+        {mfd_tscadc_init,       DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb0_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{rgmii2_init,	DEV_ON_BASEBOARD, PROFILE_ALL},

@@ -92,7 +92,7 @@
 #define WM8960_DAC_DIV_5_5		(5 << 3)
 #define WM8960_DAC_DIV_6		(6 << 3)
 
-//add adc clk controll, ebd-bo
+//add adc clk control, ebd-bo
 #define WM8960_ADC_DIV_1		(0 << 6)
 #define WM8960_ADC_DIV_1_5		(1 << 6)
 #define WM8960_ADC_DIV_2		(2 << 6)

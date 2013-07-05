@@ -979,16 +979,6 @@ static int wm8960_probe(struct snd_soc_codec *codec)
 	reg = snd_soc_read(codec, WM8960_ROUT2);
 	snd_soc_write(codec, WM8960_ROUT2, reg | 0x100);
 
-snd_soc_update_bits(codec, WM8960_POWER2, ~0, 0x1FA);// Enable DACL, DACR, LOUT1, ROUT1, SPKL, SPKR and OUT3 
-snd_soc_update_bits(codec,WM8960_POWER3, ~0, 0x00C);//  Enable left output mixer and right output mixer 
-snd_soc_update_bits(codec,WM8960_CLASSD1, ~0, 0x0F7);// Left and Right Speakers Enabled 
-snd_soc_update_bits(codec,WM8960_ROUTMIX, ~0, 0x150);// Right DAC to right output mixer enabled (RD2RO)
-snd_soc_update_bits(codec,WM8960_LOUTMIX, ~0, 0x150);// Left DAC to left output mixer enabled (LD2LO)
-snd_soc_update_bits(codec,WM8960_LOUT2, ~0, 0x17f);// LSPK Vol = 0dB, volume update enabled 
-snd_soc_update_bits(codec,WM8960_ROUT2, ~0, 0x17f);// RSPK Vol = 0dB, volume update enabled
-snd_soc_update_bits(codec,WM8960_LOUT1, ~0, 0x169);// LOUT1 Vol = 0dB, volume update enabled  
-snd_soc_update_bits(codec,WM8960_ROUT1, ~0, 0x169);// ROUT1 Vol = 0dB, volume update enabled   
-snd_soc_update_bits(codec,WM8960_DACCTL1, ~0, 0x000);// Unmute DAC digital soft mute
 snd_soc_update_bits(codec,WM8960_IFACE2, ~0, 0x040);// ADCLRC as gpio
 
 //snd_soc_update_bits(codec,WM8960_BYPASS1, ~0, 0x0d0);// lb2lo
