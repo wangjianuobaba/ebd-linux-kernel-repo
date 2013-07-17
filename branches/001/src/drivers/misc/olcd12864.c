@@ -1,9 +1,19 @@
 #define DEBUG
 #include <linux/init.h>
 #include <linux/module.h>
-#include <linux/spi/spi.h>
+#include <linux/ioctl.h>
 #include <linux/fs.h>
+#include <linux/device.h>
+#include <linux/err.h>
+#include <linux/list.h>
+#include <linux/errno.h>
 #include <linux/mutex.h>
+#include <linux/slab.h>
+#include <linux/compat.h>
+
+#include <linux/spi/spi.h>
+
+#include <asm/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/gpio.h>
 #include <linux/olcd12864.h>
@@ -39,16 +49,19 @@ static DEFINE_MUTEX(device_list_lock);
 #define start_trans(gpio, value) gpio_direction_output(gpio, value)
 #define end_trans(gpio, value) gpio_direction_output(gpio, value)
 
+#define ACTIVE          0
+#define DISACTIVE       1
+
 /*      cmd: dc = 0, cs = 0
  *      data: dc = 1, cs = 0
  *      end: cs = 1
  */
 
-static void lcd_reset(int gpio)
+static void led_reset(int gpio)
 {
-    gpio_direction_output(gpio, 0);
-    msleep(10);
-    gpio_direction_output(gpio, 1);
+    gpio_direction_output(gpio, ACTIVE);
+    udelay(10);
+    gpio_direction_output(gpio, DISACTIVE);
 }
 
 /*
@@ -102,22 +115,24 @@ static inline int lcd_write(struct lcd_spi_dev *lcd_dev, size_t len, bool state,
     t_send.bits_per_word = lcd_dev->spi->bits_per_word;
     t_send.speed_hz = lcd_dev->spi->max_speed_hz;
     t_send.rx_buf = NULL;
-    
+
     pdata = lcd_dev->spi->dev.platform_data;
 
     start_trans(pdata->lcd_dc, state);
     spi_message_init(&spi_msg);
     spi_message_add_tail(&t_send, &spi_msg);
     err = write_sync(lcd_dev, &spi_msg);
-    end_trans(pdata->lcd_dc, !state);
+    //end_trans(pdata->lcd_dc, !state);
     return err;
 }
 
-static void display_init(struct lcd_spi_dev *lcd_dev)
+#if 0
+
+static void screen_init(struct lcd_spi_dev *lcd_dev)
 {
     struct lcd12864_plat_data *pdata;
     pdata = lcd_dev->spi->dev.platform_data;
-    lcd_reset(pdata->lcd_reset);
+    led_reset(pdata->lcd_reset);
     //unsigned char *pch = kmalloc(5 *sizeof(unsigned char), GFP_KERNEL);
     lcd_write(lcd_dev, 1, W_CMD, DISPLAY_ON);
     lcd_write(lcd_dev, 1, W_CMD, DISPLAY_CONTRAST);
@@ -126,6 +141,7 @@ static void display_init(struct lcd_spi_dev *lcd_dev)
     lcd_write(lcd_dev, 1, W_CMD, SCAN_DIRECTION_N_0);
     //kfree(pch);
 }
+#endif
 
 static int lcd12864_open(struct inode *inode, struct file *filp)
 {
@@ -133,6 +149,7 @@ static int lcd12864_open(struct inode *inode, struct file *filp)
     int status = -ENXIO;
 
     mutex_lock(&device_list_lock); //lock this device
+
     /* search for device info from system, and fill in */
     list_for_each_entry(lcd_dev, &device_list, device_entry)
     {
@@ -166,21 +183,42 @@ static int lcd12864_open(struct inode *inode, struct file *filp)
     }
 
     /* do lcd initialization here or what? */
-    display_init(lcd_dev);
+#if 0
+    screen_init(lcd_dev);
+#endif
 
     mutex_unlock(&device_list_lock); //release this device
 
-    printk(KERN_ALERT ">>>>%s: reaching file:%d, at line:%d\n"
-            , __func__, status, __LINE__);
     return status;
 }
 
 static int lcd12864_release(struct inode *inode, struct file *filp)
 {
     int status = 0;
-    printk(KERN_ALERT ">>>>%s: reaching file:%d, at line:%d\n"
-            , __func__, status, __LINE__);
-    return 0;
+    struct lcd_spi_dev *lcd_dev;
+
+    mutex_lock(&device_list_lock); //lock this device
+
+    lcd_dev = filp->private_data;
+    filp->private_data = NULL;
+    lcd_dev->users--;
+    if (!lcd_dev->users) {
+        int dofree;
+
+        kfree(lcd_dev->user_buff);
+        lcd_dev->user_buff = NULL;
+
+        /* ... after we unbound from the underlying device? */
+        spin_lock_irq(&lcd_dev->spin_spi_lock);
+        dofree = (lcd_dev->spi == NULL);
+        spin_unlock_irq(&lcd_dev->spin_spi_lock);
+
+        if (dofree)
+            kfree(lcd_dev);
+    }
+
+    mutex_unlock(&device_list_lock); //release this device
+    return status;
 }
 
 static long lcd12864_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
@@ -190,11 +228,17 @@ static long lcd12864_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
     struct lcd_spi_dev *lcd_dev;
     struct spi_device *spi;
     u8 tmp = 0;
+    int err = 0;
 
     if (_IOC_TYPE(cmd) != LCD_IOC_MAGIC)//check if it's our command
         return -ENOTTY;
 
     /* check write access, do it later */
+    if (err == 0 && _IOC_DIR(cmd) & _IOC_WRITE)
+        err = !access_ok(VERIFY_READ,
+            (void __user *) arg, _IOC_SIZE(cmd));
+    if (err)
+        return -EFAULT;
 
     /* get spi data */
     lcd_dev = filp->private_data;
@@ -217,10 +261,27 @@ static long lcd12864_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
     pdata = lcd_dev->spi->dev.platform_data;
 
     switch (cmd) {
-        case IOC_DISPLAY_ON:
-            tmp = DISPLAY_ON;
-            lcd_write(lcd_dev, 1, W_CMD, tmp);
+        case IOC_LCD_CMD:
+            err = __get_user(tmp, (__u8 __user *) arg);
+            dev_warn(&lcd_dev->spi->dev, "ioctl: sending in:0x%x, err:%d\n"
+                    , tmp, err);
+            if (err == 0) {
+                lcd_write(lcd_dev, 1, W_CMD, tmp);
+            }
+
             break;
+
+        case IOC_LCD_POWER_ON:
+            dev_warn(&lcd_dev->spi->dev, "power up!\n");
+            led_reset(pdata->lcd_reset);
+            lcd_write(lcd_dev, 1, W_CMD, DISPLAY_ON);
+            break;
+
+        case IOC_LCD_POWER_OFF:
+            dev_warn(&lcd_dev->spi->dev, "power off!\n");
+            lcd_write(lcd_dev, 1, W_CMD, DISPLAY_OFF);
+            break;
+            /*...*/
         default:
             status = -EINVAL;
             break;
@@ -234,8 +295,22 @@ static int lcd12864_write(struct file *filp, const char __user *buf
         , size_t count, loff_t *f_pos)
 {
     int status = 0;
-    printk(KERN_ALERT ">>>>%s: reaching file:%d, at line:%d\n"
-            , __func__, status, __LINE__);
+    struct lcd_spi_dev *lcd_dev;
+    unsigned long missing;
+
+    if (count > USER_BUFF_SIZE)
+        return -EMSGSIZE;
+
+    lcd_dev = filp->private_data;
+
+    mutex_lock(&lcd_dev->buf_lock);
+    missing = copy_from_user(lcd_dev->user_buff, buf, count);
+    if (missing == 0) {
+        status = lcd_write(lcd_dev, count, W_DATA, 0);
+    } else {
+        status = -EFAULT;
+    }
+    mutex_unlock(&lcd_dev->buf_lock);
     return status;
 }
 
@@ -393,7 +468,6 @@ static int __init lcd12864_init(void)
      *  lcd12864_probe() because you had just register its driver
      */
 
-    printk(KERN_ALERT "Hello world.\n");
     return status;
 }
 

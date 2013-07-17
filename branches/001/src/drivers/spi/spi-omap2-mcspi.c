@@ -92,6 +92,11 @@
 
 #define OMAP2_MCSPI_WAKEUPENABLE_WKEN	BIT(0)
 
+#define IRTK2_ZHD
+#ifdef IRTK2_ZHD
+#warning "spi-omap2-mcspi.c builds for irtk2"
+#endif
+
 /* We have 2 DMA channels per CS, one for RX and one for TX */
 struct omap2_mcspi_dma {
 	int dma_tx_channel;
@@ -680,9 +685,16 @@ static int omap2_mcspi_setup_transfer(struct spi_device *spi,
 	/* standard 4-wire master mode:  SCK, MOSI/out, MISO/in, nCS
 	 * REVISIT: this controller could support SPI_3WIRE mode.
 	 */
+#ifndef IRTK2_ZHD
+        /* by default, d0 is set for reception, d1 is for transmission*/
 	l &= ~(OMAP2_MCSPI_CHCONF_IS|OMAP2_MCSPI_CHCONF_DPE1);
 	l |= OMAP2_MCSPI_CHCONF_DPE0;
 
+#else
+        /* d0 : transmission, d1 : reception */
+        l &= ~(OMAP2_MCSPI_CHCONF_DPE0);
+	l |= OMAP2_MCSPI_CHCONF_IS | OMAP2_MCSPI_CHCONF_DPE1;
+#endif  
 	/* wordlength */
 	l &= ~OMAP2_MCSPI_CHCONF_WL_MASK;
 	l |= (word_len - 1) << 7;

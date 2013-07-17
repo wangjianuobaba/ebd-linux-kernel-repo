@@ -34,6 +34,7 @@
 
 #ifdef IRTK2_ZHD
 #include "../codecs/wm8960.h"
+#warning "davinci-evm.c builds for irtk2"
 #endif
 
 #define AUDIO_FORMAT (SND_SOC_DAIFMT_DSP_B | \

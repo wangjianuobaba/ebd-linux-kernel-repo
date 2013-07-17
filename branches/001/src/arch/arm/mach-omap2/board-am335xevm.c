@@ -514,13 +514,13 @@ static struct pinmux_config spi0_pin_mux[] = {
 static struct pinmux_config spi1_pin_mux[] = {
 	{"mcasp0_aclkx.spi1_sclk", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
 		| AM33XX_INPUT_EN},
-#ifndef IRTK2_ZHD  //spi's direction seems reverse from the reference. our test confirm that.
+  //spi's direction seems reverse from the reference. our test confirm that.
 	{"mcasp0_fsx.spi1_d0", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
 		| AM33XX_PULL_UP | AM33XX_INPUT_EN},
-#endif
+#ifndef IRTK2_ZHD
 	{"mcasp0_axr0.spi1_d1", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
 		| AM33XX_INPUT_EN},
-
+#endif
 	{"mcasp0_ahclkr.spi1_cs0", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
 		| AM33XX_PULL_UP | AM33XX_INPUT_EN},
 	{NULL, 0},
@@ -1674,7 +1674,7 @@ static struct spi_board_info am335x_spi1_slave_info[] = {
 };
 
 static const struct lcd12864_plat_data olcd12864_plat = {
-	.lcd_dc = GPIO_TO_PIN(3, 15),
+	.lcd_dc = GPIO_TO_PIN(3, 16),
 	.lcd_reset = GPIO_TO_PIN(3, 21),
 };
 
@@ -1683,7 +1683,7 @@ static struct spi_board_info irtk2_spi1_slave_info[] = {
 		.modalias      = "olcd12864",
 		.platform_data = &olcd12864_plat,
 		.irq           = -1,
-		.max_speed_hz  = 6000000,
+		.max_speed_hz  = 12000000,
 		.bus_num       = 2,
 		.chip_select   = 0,
                 .mode = SPI_MODE_0,

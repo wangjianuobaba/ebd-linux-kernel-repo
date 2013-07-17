@@ -28,14 +28,9 @@ extern "C" {
     //io commands
 
     enum {
-        IOC_DISPLAY_CLEAR = _IO(LCD_IOC_MAGIC, 1),
-        IOC_DISPLAY_REVERSE = _IO(LCD_IOC_MAGIC, 2),
-        IOC_CONTRAST_LEVEL = _IOW(LCD_IOC_MAGIC, 3, u8),
-        IOC_BRIGHTNESS_LEVEL = _IOW(LCD_IOC_MAGIC, 4, u8),
-        IOC_DISPLAY_ON = _IO(LCD_IOC_MAGIC, 5),
-        IOC_DISPLAY_OFF = _IO(LCD_IOC_MAGIC, 6),
-        IOC_MEM_ADDR_MODE = _IOW(LCD_IOC_MAGIC, 7, u8),
-        IOC_DISPLAY_POSITION = _IOW(LCD_IOC_MAGIC, 8, u16),
+        IOC_LCD_CMD = _IOW(LCD_IOC_MAGIC, 1, u8),
+        IOC_LCD_POWER_ON = _IO(LCD_IOC_MAGIC, 2),
+        IOC_LCD_POWER_OFF = _IO(LCD_IOC_MAGIC, 3),
     };
 
     //lcd command
@@ -46,12 +41,10 @@ extern "C" {
         DISPLAY_OFF = 0xAE,
         DISPLAY_ON,
         SCAN_DIRECTION_N_0 = 0xC8,
-
-
     };
 
 #define DEF_CONTRAST_LEVEL 0x80
-    
+
 #ifdef	__cplusplus
 }
 #endif

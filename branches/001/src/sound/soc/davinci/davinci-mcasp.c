@@ -32,6 +32,9 @@
 #include "davinci-mcasp.h"
 
 #define IRTK2_ZHD
+#ifdef IRTK2_ZHD
+#warning "davinci-mcasp.c builds for irtk2"
+#endif
 
 /*
  * McASP register definitions
