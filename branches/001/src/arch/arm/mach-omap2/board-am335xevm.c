@@ -83,7 +83,11 @@
 #define BBB_PHY_MASK		0xfffffffe
 
 /* AM335X EVM Phy ID and Debug Registers */
+#ifdef IRTK2_ZHD
+#define AM335X_EVM_PHY_ID		0x4dd072
+#else
 #define AM335X_EVM_PHY_ID		0x4dd074
+#endif
 #define AM335X_EVM_PHY_MASK		0xfffffffe
 #define AR8051_PHY_DEBUG_ADDR_REG	0x1d
 #define AR8051_PHY_DEBUG_DATA_REG	0x1e
@@ -2850,8 +2854,13 @@ static void setup_general_purpose_evm(void)
 			prof_sel);
 
 	_configure_device(boardid, gen_purp_evm_dev_cfg, (1L << prof_sel));
-
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_RGMII, NULL, NULL);
+        
+#ifdef IRTK2_ZHD
+        am33xx_cpsw_init(AM33XX_CPSW_MODE_RGMII, NULL, "0:04");
+#else
+        am33xx_cpsw_init(AM33XX_CPSW_MODE_RGMII, NULL, NULL);
+#endif
+	
 	/* Atheros Tx Clk delay Phy fixup */
 	phy_register_fixup_for_uid(AM335X_EVM_PHY_ID, AM335X_EVM_PHY_MASK,
 				   am33xx_evm_tx_clk_dly_phy_fixup);

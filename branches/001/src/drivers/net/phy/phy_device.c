@@ -247,6 +247,7 @@ struct phy_device * get_phy_device(struct mii_bus *bus, int addr)
 	int r;
 
 	r = get_phy_id(bus, addr, &phy_id);
+        printk(KERN_WARNING "phy_id:0x%X, addr:0x%X\n", phy_id, addr);
 	if (r)
 		return ERR_PTR(r);
 
