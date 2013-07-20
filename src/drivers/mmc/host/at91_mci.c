@@ -751,15 +751,19 @@ static void at91_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		switch (ios->power_mode) {
 			case MMC_POWER_OFF:
 				gpio_set_value(host->board->vcc_pin, 0);
-#ifdef CONFIG_MMC_AT91_WL12XX
-				msleep(100);
-#endif
 				break;
 			case MMC_POWER_UP:
-				gpio_set_value(host->board->vcc_pin, 1);
+				
 #ifdef CONFIG_MMC_AT91_WL12XX
-				msleep(100);
+				msleep(20);
 #endif
+
+				gpio_set_value(host->board->vcc_pin, 1);
+
+#ifdef CONFIG_MMC_AT91_WL12XX
+				msleep(200);
+#endif
+
 				break;
 			case MMC_POWER_ON:
 				break;
@@ -970,12 +974,16 @@ static int __init at91_mci_probe(struct platform_device *pdev)
 	} else {
 		mmc->f_max = param_f_max;
 	}
+#ifdef CONFIG_MMC_AT91_WL12XX
+	mmc->f_max = 20000000;
+#endif
 	
 	mmc->ocr_avail = MMC_VDD_32_33 | MMC_VDD_33_34;
 	mmc->caps = 0;
 
 #ifdef CONFIG_MMC_AT91_WL12XX
 	mmc->caps |= MMC_CAP_NONREMOVABLE;
+	mmc->caps |= MMC_PM_KEEP_POWER;
 #endif	
 
 	mmc->max_blk_size  = MCI_MAXBLKSIZE;

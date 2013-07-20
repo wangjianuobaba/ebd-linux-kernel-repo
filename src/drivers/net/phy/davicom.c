@@ -171,6 +171,17 @@ static struct phy_driver dm9161a_driver = {
 	.driver		= { .owner = THIS_MODULE,},
 };
 
+static struct phy_driver dm9161b_driver = {
+	.phy_id		= 0x0181b8b0,
+	.name		= "Davicom DM9161B",
+	.phy_id_mask	= 0x0ffffff0,
+	.features	= PHY_BASIC_FEATURES,
+	.config_init	= dm9161_config_init,
+	.config_aneg	= dm9161_config_aneg,
+	.read_status	= genphy_read_status,
+	.driver		= { .owner = THIS_MODULE,},
+};
+
 static struct phy_driver dm9131_driver = {
 	.phy_id		= 0x00181b80,
 	.name		= "Davicom DM9131",
@@ -196,11 +207,17 @@ static int __init davicom_init(void)
 	if (ret)
 		goto err2;
 
-	ret = phy_driver_register(&dm9131_driver);
+	ret = phy_driver_register(&dm9161b_driver);
 	if (ret)
 		goto err3;
+
+	ret = phy_driver_register(&dm9131_driver);
+	if (ret)
+		goto err4;
 	return 0;
 
+ err4:
+	phy_driver_unregister(&dm9161b_driver);
  err3:
 	phy_driver_unregister(&dm9161a_driver);
  err2:
@@ -213,6 +230,7 @@ static void __exit davicom_exit(void)
 {
 	phy_driver_unregister(&dm9161e_driver);
 	phy_driver_unregister(&dm9161a_driver);
+	phy_driver_unregister(&dm9161b_driver);
 	phy_driver_unregister(&dm9131_driver);
 }
 
@@ -222,6 +240,7 @@ module_exit(davicom_exit);
 static struct mdio_device_id __maybe_unused davicom_tbl[] = {
 	{ 0x0181b880, 0x0ffffff0 },
 	{ 0x0181b8a0, 0x0ffffff0 },
+	{ 0x0181b8b0, 0x0ffffff0 },
 	{ 0x00181b80, 0x0ffffff0 },
 	{ }
 };

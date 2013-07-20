@@ -745,6 +745,14 @@ int __init at91_clock_init(unsigned long main_clock)
 		(unsigned) main_clock / 1000000,
 		((unsigned) main_clock % 1000000) / 1000);
 
+	printk("Clocks: Main   %lu Hz\n", main_clk.rate_hz);
+	printk("Clocks: PLLA   %lu Hz\n", plla.rate_hz);
+	printk("Clocks: PLLB   %lu Hz\n", pllb.rate_hz);
+	printk("Clocks: CPU    %u Hz\n", freq);
+	printk("Clocks: Master %lu Hz\n", mck.rate_hz);
+	printk("Clocks: UDP    %lu Hz\n", udpck.rate_hz);
+	printk("Clocks: UHP    %lu Hz\n", uhpck.rate_hz);
+
 	return 0;
 }
 

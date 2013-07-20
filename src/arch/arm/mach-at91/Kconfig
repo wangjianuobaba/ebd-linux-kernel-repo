@@ -328,82 +328,42 @@ if ARCH_AT91SAM9G20
 comment "AT91SAM9G20 Board Type"
 
 config MACH_AT91SAM9G20EK
-	bool "Atmel AT91SAM9G20-EK Evaluation Kit"
+	bool "Boards based on Atmel AT91SAM9G20-EK Evaluation Kit"
+	help
+	  Select this if your board is based on Atmel's AT91SAM9G20-EK 
+	  Evaluation Kit.
+	  
+config MACH_AT91SAM9G20EK_ORG
+	bool "Original Atmel AT91SAM9G20-EK Evaluation Kit"
+	depends on MACH_AT91SAM9G20EK
 	select HAVE_AT91_DATAFLASH_CARD
 	help
 	  Select this if you are using Atmel's AT91SAM9G20-EK Evaluation Kit
 	  that embeds only one SD/MMC slot.
 
-choice
-	prompt "AT91SAM9G20EK LED Device"
-	depends on MACH_AT91SAM9G20EK && NEW_LEDS
-	default MACH_AT91SAM9G20EK_IRTK_LED
-	help
-	  Choose LED device for which type of producd:iRTK or VNet
-
-config MACH_AT91SAM9G20EK_IRTK_LED
-	tristate "iRTK LED"
-	depends on MACH_AT91SAM9G20EK && NEW_LEDS
-	help
-	  Register iRTK LED devices.
-
-config MACH_AT91SAM9G20EK_VNET_LED
-	tristate "VNet LED"
-	depends on MACH_AT91SAM9G20EK && NEW_LEDS
-	help
-	  Register VNet LED devices.
-
-endchoice
-
-choice
-	prompt "AT91SAM9G20EK KEY Device"
-	depends on MACH_AT91SAM9G20EK && NEW_LEDS
-	default MACH_AT91SAM9G20EK_IRTK_KEY
-	help
-	  Choose KEY device for which type of producd:iRTK or VNet
-
-config MACH_AT91SAM9G20EK_IRTK_KEY
-	tristate "iRTK KEY"
-	depends on MACH_AT91SAM9G20EK && NEW_LEDS
-	help
-	  Register iRTK KEY devices.
-
-config MACH_AT91SAM9G20EK_VNET_KEY
-	tristate "VNet KEY"
-	depends on MACH_AT91SAM9G20EK && NEW_LEDS
-	help
-	  Register VNet KEY devices.
-
-endchoice
-
-choice
-	prompt "AT91SAM9G20EK ADC Device"
-	depends on MACH_AT91SAM9G20EK && AT91_ADC
-	default MACH_AT91SAM9G20EK_IRTK_ADC
-	help
-	  Choose KEY device for which type of producd:iRTK or VNet
-
-config MACH_AT91SAM9G20EK_IRTK_ADC
-	tristate "iRTK ADC"
-	depends on MACH_AT91SAM9G20EK && AT91_ADC
-	help
-	  Register iRTK ADC devices.
-
-config MACH_AT91SAM9G20EK_VNET_ADC
-	tristate "VNet ADC"
-	depends on MACH_AT91SAM9G20EK && AT91_ADC
-	help
-	  Register VNet ADC devices.
-
-endchoice
-
 config MACH_AT91SAM9G20EK_2MMC
-	depends on MACH_AT91SAM9G20EK
 	bool "Atmel AT91SAM9G20-EK Evaluation Kit with 2 SD/MMC Slots"
+	depends on MACH_AT91SAM9G20EK_ORG
 	help
 	  Select this if you are using an Atmel AT91SAM9G20-EK Evaluation Kit
 	  with 2 SD/MMC Slots. This is the case for AT91SAM9G20-EK rev. C and
 	  onwards.
+	  
+config MACH_AT91SAM9G20EK_BAITE
+	bool "Baite Evaluation Kit based on AT91SAM9G20-EK"
+	depends on MACH_AT91SAM9G20EK
+	select HAVE_AT91_DATAFLASH_CARD
+	select MMC_AT91_WL12XX
+	help
+	  Select this if you are using Baite's AT91SAM9G20-EK Evaluation Kit
+	  that embeds only one SD/MMC slot(b).
+	  
+config MACH_AT91SAM9G20EK_VNET30
+	bool "VNET30 based on AT91SAM9G20-EK"
+	depends on MACH_AT91SAM9G20EK
+	select MMC_AT91_WL12XX
+	help
+	  Select this if you are using VNET30
 
 config MACH_CPU9G20
 	bool "Eukrea CPU9G20 board"

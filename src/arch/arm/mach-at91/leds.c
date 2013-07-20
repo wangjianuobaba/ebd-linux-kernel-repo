@@ -42,7 +42,12 @@ void __init at91_gpio_leds(struct gpio_led *leds, int nr)
 		return;
 
 	for (i = 0; i < nr; i++)
-		at91_set_gpio_output(leds[i].gpio, leds[i].active_low);
+		if (leds[i].default_state == LEDS_GPIO_DEFSTATE_ON) {
+			at91_set_gpio_output(leds[i].gpio, 1^leds[i].active_low);
+		} else {
+			at91_set_gpio_output(leds[i].gpio, 0^leds[i].active_low);
+		}
+			
 
 	led_data.leds = leds;
 	led_data.num_leds = nr;

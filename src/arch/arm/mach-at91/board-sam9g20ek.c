@@ -48,11 +48,6 @@
 #include "sam9_smc.h"
 #include "generic.h"
 
-#include <linux/wl12xx.h>
-#include <linux/mmc/host.h>
-#include <linux/delay.h>
-
-
 /*
  * board revision encoding
  * bit 0:
@@ -210,76 +205,6 @@ static void __init ek_add_device_nand(void)
  * MCI (SD/MMC)
  * wp_pin and vcc_pin are not connected
  */
-
-#ifdef CONFIG_MMC_AT91_WL12XX
-
-/* wl12xx enable pin */
-#ifdef CONFIG_WL12XX_WL_EN_PIO_BANK_A
-#define PIN_WIFI_ENABLE	(PIN_BASE + 0x00 + CONFIG_WL12XX_WL_EN_PIO_LINE) 
-#endif
-
-#ifdef CONFIG_WL12XX_WL_EN_PIO_BANK_B
-#define PIN_WIFI_ENABLE	(PIN_BASE + 0x20 + CONFIG_WL12XX_WL_EN_PIO_LINE) 
-#endif
-
-#ifdef CONFIG_WL12XX_WL_EN_PIO_BANK_C
-#define PIN_WIFI_ENABLE	(PIN_BASE + 0x40 + CONFIG_WL12XX_WL_EN_PIO_LINE) 
-#endif
-
-#ifdef CONFIG_WL12XX_WL_EN_PIO_BANK_D
-#define PIN_WIFI_ENABLE	(PIN_BASE + 0x60 + CONFIG_WL12XX_WL_EN_PIO_LINE) 
-#endif
-
-#ifdef CONFIG_WL12XX_WL_EN_PIO_BANK_E
-#define PIN_WIFI_ENABLE	(PIN_BASE + 0x80 + CONFIG_WL12XX_WL_EN_PIO_LINE) 
-#endif
-
-/* wl12xx irq pin and irq number */
-#ifdef CONFIG_WL12XX_WL_IRQ_PIO_PC12
-#define PIN_WIFI_IRQ		AT91_PIN_PC12
-#define WIFI_IRQ			AT91SAM9260_ID_IRQ0
-#endif
-
-#ifdef CONFIG_WL12XX_WL_IRQ_PIO_PC14
-#define PIN_WIFI_IRQ		AT91_PIN_PC14
-#define WIFI_IRQ			AT91SAM9260_ID_IRQ2
-#endif
-
-#ifdef CONFIG_WL12XX_WL_IRQ_PIO_PC15
-#define PIN_WIFI_IRQ		AT91_PIN_PC15
-#define WIFI_IRQ			AT91SAM9260_ID_IRQ1
-#endif
-
-struct wl12xx_platform_data ek_wl12xx_data = {
-	.irq = 					WIFI_IRQ,
-	.board_ref_clock = 	WL12XX_REFCLOCK_38_XTAL, /* 38.4Mhz */
-	.platform_quirks = 	WL12XX_PLATFORM_QUIRK_EDGE_IRQ,
-};
-
-static void __init wl12xx_init(void)
-{	
-	/* set PIN_WIFI_ENABLE mode to out, value to 0, enable pull up for suspend */
-	at91_set_gpio_output(PIN_WIFI_ENABLE, 1);
-
-	gpio_request(PIN_WIFI_IRQ, "wlan_irq");
-	
-#ifdef CONFIG_WL12XX_WL_IRQ_PIO_PC12
-	at91_set_A_periph(PIN_WIFI_IRQ, 0);
-#endif
-
-#ifdef CONFIG_WL12XX_WL_IRQ_PIO_PC14
-	at91_set_B_periph(PIN_WIFI_IRQ, 0);
-#endif
-
-#ifdef CONFIG_WL12XX_WL_IRQ_PIO_PC15
-	at91_set_B_periph(PIN_WIFI_IRQ, 0);
-#endif
-
-	wl12xx_set_platform_data(&ek_wl12xx_data);
-}
-
-#endif /* #ifdef MMC_AT91_WL12XX */
-
 #if defined(CONFIG_MMC_ATMELMCI) || defined(CONFIG_MMC_ATMELMCI_MODULE)
 static struct mci_platform_data __initdata ek_mmc_data = {
 	.slot[1] = {
@@ -290,32 +215,14 @@ static struct mci_platform_data __initdata ek_mmc_data = {
 };
 #else
 static struct at91_mmc_data __initdata ek_mmc_data = {
-
-#ifdef CONFIG_MMC_AT91_SLOT_A
-	.slot_b		= 0,	/* Only one slot so use slot A */
-#else
 	.slot_b		= 1,	/* Only one slot so use slot B */
-#endif
-
 	.wire4		= 1,
-/*
 	.det_pin	= AT91_PIN_PC9,
-*/
-
-#ifdef CONFIG_MMC_AT91_WL12XX
-	.vcc_pin = PIN_WIFI_ENABLE,
-#endif
-
 };
 #endif
 
 static void __init ek_add_device_mmc(void)
 {
-
-#ifdef CONFIG_MMC_AT91_WL12XX
-	wl12xx_init();
-#endif
-
 #if defined(CONFIG_MMC_ATMELMCI) || defined(CONFIG_MMC_ATMELMCI_MODULE)
 	if (ek_have_2mmc()) {
 		ek_mmc_data.slot[0].bus_width = 4;
