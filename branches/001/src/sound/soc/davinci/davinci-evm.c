@@ -72,7 +72,7 @@ static int evm_hw_params(struct snd_pcm_substream *substream,
 #endif
 
 #ifdef IRTK2_ZHD
-			sysclk = 22579200;
+			sysclk = 12288000*2;
 #else
 			sysclk = 12000000;
 #endif
@@ -91,7 +91,7 @@ static int evm_hw_params(struct snd_pcm_substream *substream,
 #ifdef IRTK2_ZHD
 #define IRTK2_ZHD_XTAL 24000000
 
-	ret = snd_soc_dai_set_pll(codec_dai, 0, 0, IRTK2_ZHD_XTAL, 12288000*2);//wm8960 accept 12.288MHz, 11.2896MHz
+	ret = snd_soc_dai_set_pll(codec_dai, 0, 0, IRTK2_ZHD_XTAL, sysclk);//wm8960 accept 12.288MHz, 11.2896MHz
 	if(ret < 0){
 		return ret;
 	}

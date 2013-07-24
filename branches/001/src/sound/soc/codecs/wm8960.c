@@ -28,6 +28,11 @@
 
 #define AUDIO_NAME "wm8960"
 
+#define IRTK2_ZHD
+#ifdef IRTK2_ZHD
+#warning "wm8960.c builds for irtk2"
+#endif
+
 /* R25 - Power 1 */
 #define WM8960_VMID_MASK 0x180
 #define WM8960_VREF      0x40
@@ -529,13 +534,15 @@ static int wm8960_hw_params(struct snd_pcm_substream *substream,
 		break;
 	}
 
-	pr_debug(">>>>%s, new rate is set.\n", __func__);
 	/* Update filters for the new rate */
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		wm8960->playback_fs = params_rate(params);
 		pr_debug(">>>>the frame rate is %dHz.\n", wm8960->playback_fs);
+                
 		wm8960_set_deemph(codec);
 	} else { //for audio record
+            pr_debug(">>>>sample rate passed in from upper layer is %dHz.\n", 
+                    params_rate(params));
 		for (i = 0; i < ARRAY_SIZE(alc_rates); i++)
 			if (alc_rates[i].rate == params_rate(params)){
 				snd_soc_update_bits(codec,
@@ -543,6 +550,7 @@ static int wm8960_hw_params(struct snd_pcm_substream *substream,
 						    alc_rates[i].val);
 			pr_debug(">>>>the alc rate is %dHz.\n", alc_rates[i].rate);
 			/* added by bo, manually set record sampling rate to 16kHz */
+                        /* 16kHz is available when sysclk is 12.288MHz */
 			snd_soc_dai_set_clkdiv(dai, WM8960_DACDIV, WM8960_DAC_DIV_3);
 			}
 	}
@@ -874,7 +882,11 @@ static int wm8960_set_bias_level(struct snd_soc_codec *codec,
 	return wm8960->set_bias_level(codec, level);
 }
 
+#ifdef xIRTK2_ZHD //just for test
+#define WM8960_RATES SNDRV_PCM_RATE_48000
+#else
 #define WM8960_RATES SNDRV_PCM_RATE_8000_48000
+#endif
 
 #define WM8960_FORMATS \
 	(SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE | \
