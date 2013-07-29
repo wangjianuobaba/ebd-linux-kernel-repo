@@ -77,7 +77,7 @@ static ssize_t write_sync(struct lcd_spi_dev *lcd_dev, struct spi_message *messa
 {
     DECLARE_COMPLETION_ONSTACK(done);
     int status;
-
+    
     message->complete = write_complete;
     message->context = &done;
 
@@ -115,6 +115,7 @@ static inline int lcd_write(struct lcd_spi_dev *lcd_dev, size_t len, bool state,
     t_send.bits_per_word = lcd_dev->spi->bits_per_word;
     t_send.speed_hz = lcd_dev->spi->max_speed_hz;
     t_send.rx_buf = NULL;
+    t_send.delay_usecs = 5; //add this line to speed up transfer
 
     pdata = lcd_dev->spi->dev.platform_data;
 
@@ -263,7 +264,7 @@ static long lcd12864_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
     switch (cmd) {
         case IOC_LCD_CMD:
             err = __get_user(tmp, (__u8 __user *) arg);
-            dev_warn(&lcd_dev->spi->dev, "ioctl: sending in:0x%x, err:%d\n"
+            dev_dbg(&lcd_dev->spi->dev, "ioctl: sending in:0x%x, err:%d\n"
                     , tmp, err);
             if (err == 0) {
                 lcd_write(lcd_dev, 1, W_CMD, tmp);
