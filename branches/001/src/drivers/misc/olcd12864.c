@@ -8,17 +8,12 @@
 #include <linux/list.h>
 #include <linux/errno.h>
 #include <linux/mutex.h>
-#include <linux/slab.h>
-#include <linux/compat.h>
-
 #include <linux/spi/spi.h>
-
 #include <asm/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/gpio.h>
 #include <linux/olcd12864.h>
 #include <linux/delay.h>
-
 
 
 #define SPIDEV_MAJOR 153	//assigned, don't change it.
@@ -57,7 +52,7 @@ static DEFINE_MUTEX(device_list_lock);
  *      end: cs = 1
  */
 
-static void led_reset(int gpio)
+static void oled_reset(int gpio)
 {
     gpio_direction_output(gpio, ACTIVE);
     udelay(10);
@@ -133,7 +128,7 @@ static void screen_init(struct lcd_spi_dev *lcd_dev)
 {
     struct lcd12864_plat_data *pdata;
     pdata = lcd_dev->spi->dev.platform_data;
-    led_reset(pdata->lcd_reset);
+    oled_reset(pdata->lcd_reset);
     //unsigned char *pch = kmalloc(5 *sizeof(unsigned char), GFP_KERNEL);
     lcd_write(lcd_dev, 1, W_CMD, DISPLAY_ON);
     lcd_write(lcd_dev, 1, W_CMD, DISPLAY_CONTRAST);
@@ -274,7 +269,7 @@ static long lcd12864_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 
         case IOC_LCD_POWER_ON:
             dev_warn(&lcd_dev->spi->dev, "power up!\n");
-            led_reset(pdata->lcd_reset);
+            oled_reset(pdata->lcd_reset);
             lcd_write(lcd_dev, 1, W_CMD, DISPLAY_ON);
             break;
 
@@ -479,7 +474,6 @@ static void __exit lcd12864_exit(void)
     spi_unregister_driver(&lcd_spi_driver); //uninstall driver
     class_destroy(lcd_spi_class); //uninstall API
     unregister_chrdev(SPIDEV_MAJOR, lcd_spi_driver.driver.name); //kill device file
-    printk(KERN_ALERT "Good bye, world.\n");
 }
 
 module_init(lcd12864_init);

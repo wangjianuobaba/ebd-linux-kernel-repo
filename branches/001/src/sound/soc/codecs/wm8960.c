@@ -551,7 +551,7 @@ static int wm8960_hw_params(struct snd_pcm_substream *substream,
 			pr_debug(">>>>the alc rate is %dHz.\n", alc_rates[i].rate);
 			/* added by bo, manually set record sampling rate to 16kHz */
                         /* 16kHz is available when sysclk is 12.288MHz */
-			snd_soc_dai_set_clkdiv(dai, WM8960_DACDIV, WM8960_DAC_DIV_3);
+			//snd_soc_dai_set_clkdiv(dai, WM8960_DACDIV, WM8960_DAC_DIV_3);
 			}
 	}
 
@@ -882,7 +882,7 @@ static int wm8960_set_bias_level(struct snd_soc_codec *codec,
 	return wm8960->set_bias_level(codec, level);
 }
 
-#ifdef xIRTK2_ZHD //just for test
+#ifdef IRTK2_ZHD //just for test
 #define WM8960_RATES SNDRV_PCM_RATE_48000
 #else
 #define WM8960_RATES SNDRV_PCM_RATE_8000_48000
