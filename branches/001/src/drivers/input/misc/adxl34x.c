@@ -21,7 +21,7 @@
 
 #include "adxl34x.h"
 
-#define xUSING_POLL //not successful
+#define USING_POLL //good to go
 
 /* ADXL345/6 Register Map */
 #define DEVID		0x00	/* R   Device ID */
@@ -421,11 +421,17 @@ static void __adxl34x_disable(struct adxl34x *ac)
 	 * with minimum power consumption.
 	 */
 	AC_WRITE(ac, POWER_CTL, 0);
+        dev_warn(ac->dev, "disabled.\n");
 }
 
 static void __adxl34x_enable(struct adxl34x *ac)
 {
-	AC_WRITE(ac, POWER_CTL, ac->pdata.power_mode | PCTL_MEASURE);
+#ifdef USING_POLL
+	AC_WRITE(ac, POWER_CTL, PCTL_MEASURE);
+#else
+        AC_WRITE(ac, POWER_CTL, ac->pdata.power_mode | PCTL_MEASURE);
+#endif
+        dev_warn(ac->dev, "enabled.\n");
 }
 
 void adxl34x_suspend(struct adxl34x *ac)
@@ -479,7 +485,7 @@ static ssize_t adxl34x_disable_store(struct device *dev,
 	if (!ac->suspended && ac->opened) {
 		if (val) {
 			if (!ac->disabled)
-				__adxl34x_disable(ac);
+				__adxl34x_disable(ac);     
 		} else {
 			if (ac->disabled)
 				__adxl34x_enable(ac);
@@ -679,7 +685,6 @@ static int adxl34x_input_open(struct input_dev *input)
 	struct adxl34x *ac = input_get_drvdata(input);
 
 	mutex_lock(&ac->mutex);
-
 	if (!ac->suspended && !ac->disabled)
 		__adxl34x_enable(ac);
 
@@ -707,25 +712,19 @@ static void adxl34x_input_close(struct input_dev *input)
 static void adxl34x_dev_poll(struct input_polled_dev *dev)
 {
         struct adxl34x *ac = (struct adxl34x *)dev->private;
-        
-        
         struct adxl34x_platform_data *pdata = &ac->pdata;
 	struct axis_triple axis;
-        pr_debug(">>>>%s:enter.\n", __func__);
         
 	adxl34x_get_triple(ac, &axis);
-        pr_debug(">>>>%s:x is :%d.\n", __func__, axis.x);
-        pr_debug(">>>>%s:y is :%d.\n", __func__, axis.y);
-        pr_debug(">>>>%s:z is :%d.\n", __func__, axis.z);
+        pr_debug(">>>>%s:x is :%d\n", __func__, axis.x);
+        pr_debug(">>>>%s:y is :%d\n", __func__, axis.y);
+        pr_debug(">>>>%s:z is :%d\n", __func__, axis.z);
 	input_report_abs(ac->input, pdata->ev_code_x,
 		    axis.x - ac->swcal.x);
 	input_report_abs(ac->input, pdata->ev_code_y,
 		    axis.y - ac->swcal.y);
 	input_report_abs(ac->input, pdata->ev_code_z,
 		    axis.z - ac->swcal.z);
-        if(ac->poll_dev->poll_interval == 200){
-            ac->poll_dev->poll_interval = 100;
-        }
         input_sync(dev->input);
 }
 
@@ -748,14 +747,11 @@ struct adxl34x *adxl34x_probe(struct device *dev, int irq,
 	ac = kzalloc(sizeof(*ac), GFP_KERNEL);
 #ifdef USING_POLL
         ac->poll_dev = input_allocate_polled_device();
+        input_dev = ac->poll_dev->input;
 #else
 	input_dev = input_allocate_device();
 #endif
-
-#ifdef USING_POLL
-        input_dev = ac->poll_dev->input;
-#endif
-        
+ 
 	if (!ac || !input_dev) {
 		err = -ENOMEM;
 		goto err_free_mem;
@@ -839,6 +835,7 @@ struct adxl34x *adxl34x_probe(struct device *dev, int irq,
 	__set_bit(pdata->ev_code_tap[ADXL_Z_AXIS], input_dev->keybit);
 #endif
         
+#ifndef USING_POLL
 	if (pdata->ev_code_ff) {
 		ac->int_mask = FREE_FALL;
 		__set_bit(pdata->ev_code_ff, input_dev->keybit);
@@ -872,24 +869,28 @@ struct adxl34x *adxl34x_probe(struct device *dev, int irq,
 		dev_err(dev, "irq %d busy?\n", ac->irq);
 		goto err_free_mem;
 	}
-
+        
+#endif
+        
 	err = sysfs_create_group(&dev->kobj, &adxl34x_attr_group);
 	if (err)
 		goto err_free_irq;
+		
+	
 #ifdef USING_POLL
         ac->poll_dev->poll = adxl34x_dev_poll;
-        ac->poll_dev->poll_interval = 200;
+        ac->poll_dev->poll_interval = 50;
         ac->poll_dev->poll_interval_min = 1;
         ac->poll_dev->poll_interval_max = 500;
         ac->poll_dev->private = ac;
         err = input_register_polled_device(ac->poll_dev);
-#else
+#else       
 	err = input_register_device(input_dev);
-#endif  
+#endif 
 	if (err)
 		goto err_remove_attr;
 
-	AC_WRITE(ac, THRESH_TAP, pdata->tap_threshold);
+#ifndef USING_POLL	
 	AC_WRITE(ac, OFSX, pdata->x_axis_offset);
 	ac->hwcal.x = pdata->x_axis_offset;
 	AC_WRITE(ac, OFSY, pdata->y_axis_offset);
@@ -907,12 +908,14 @@ struct adxl34x *adxl34x_probe(struct device *dev, int irq,
 	AC_WRITE(ac, TIME_FF, pdata->free_fall_time);
 	AC_WRITE(ac, TAP_AXES, pdata->tap_axis_control);
 	AC_WRITE(ac, ACT_INACT_CTL, pdata->act_axis_control);
+	AC_WRITE(ac, FIFO_CTL, FIFO_MODE(pdata->fifo_mode) |
+			SAMPLES(pdata->watermark));
+#endif			
 	AC_WRITE(ac, BW_RATE, RATE(ac->pdata.data_rate) |
 		 (pdata->low_power_mode ? LOW_POWER : 0));
 	AC_WRITE(ac, DATA_FORMAT, pdata->data_range);
-	AC_WRITE(ac, FIFO_CTL, FIFO_MODE(pdata->fifo_mode) |
-			SAMPLES(pdata->watermark));
 
+#ifndef USING_POLL
 	if (pdata->use_int2) {
 		/* Map all INTs to INT2 */
 		AC_WRITE(ac, INT_MAP, ac->int_mask | OVERRUN);
@@ -943,8 +946,13 @@ struct adxl34x *adxl34x_probe(struct device *dev, int irq,
 	}
 
 	AC_WRITE(ac, INT_ENABLE, ac->int_mask | OVERRUN);
+#endif    
+        ac->pdata.power_mode &= (PCTL_AUTO_SLEEP | PCTL_LINK);
 
-	ac->pdata.power_mode &= (PCTL_AUTO_SLEEP | PCTL_LINK);
+
+#ifdef USING_POLL
+        AC_WRITE(ac, POWER_CTL, PCTL_MEASURE);
+#endif	
 
 	return ac;
 
