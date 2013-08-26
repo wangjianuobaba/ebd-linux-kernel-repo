@@ -109,12 +109,14 @@ static struct tps_info tps65910_regs[] = {
 		.max_uV = 4500000,
 	},
 	{
+	#if 0	//no tps65910 vdd3
 		.name = "VDD3",
 		.min_uV = 5000000,
 		.max_uV = 5000000,
 		.table_len = ARRAY_SIZE(VDD3_VSEL_table),
 		.table = VDD3_VSEL_table,
 	},
+	#endif
 	{
 		.name = "VDIG1",
 		.min_uV = 1200000,

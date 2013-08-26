@@ -3146,7 +3146,9 @@ static struct tps65910_board am335x_tps65910_info = {
 	.tps65910_pmic_init_data[TPS65910_REG_VIO]	= &am335x_dummy,
 	.tps65910_pmic_init_data[TPS65910_REG_VDD1]	= &am335x_vdd1,
 	.tps65910_pmic_init_data[TPS65910_REG_VDD2]	= &am335x_vdd2,
+	#if 0	//no tps65910 vdd3
 	.tps65910_pmic_init_data[TPS65910_REG_VDD3]	= &am335x_dummy,
+	#endif
 	.tps65910_pmic_init_data[TPS65910_REG_VDIG1]	= &am335x_dummy,
 	.tps65910_pmic_init_data[TPS65910_REG_VDIG2]	= &am335x_dummy,
 	.tps65910_pmic_init_data[TPS65910_REG_VPLL]	= &am335x_dummy,
