@@ -3249,9 +3249,9 @@ static void __init am335x_evm_i2c_init(void)
 {
 	/* Initially assume General Purpose EVM Config */
 	am335x_evm_id = GEN_PURP_EVM;
-
+#ifndef IRTK2_ZHD
 	evm_init_cpld();
-
+#endif
 	omap_register_i2c_bus(1, 100, am335x_i2c0_boardinfo,
 				ARRAY_SIZE(am335x_i2c0_boardinfo));
 }

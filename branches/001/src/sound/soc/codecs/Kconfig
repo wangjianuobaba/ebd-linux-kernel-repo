@@ -8,6 +8,11 @@ config SND_SOC_I2C_AND_SPI
 	default y if I2C=y
 	default y if SPI_MASTER=y
 
+config SND_SOC_WM8960
+	tristate "CODEC drivers for WM8960"
+	default m if I2C=m
+	default y if I2C=y
+
 config SND_SOC_ALL_CODECS
 	tristate "Build all ASoC CODEC drivers"
 	select SND_SOC_88PM860X if MFD_88PM860X
@@ -83,7 +88,7 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_WM8904 if I2C
 	select SND_SOC_WM8940 if I2C
 	select SND_SOC_WM8955 if I2C
-	select SND_SOC_WM8960 if I2C
+	#select SND_SOC_WM8960 if I2C
 	select SND_SOC_WM8961 if I2C
 	select SND_SOC_WM8962 if I2C
 	select SND_SOC_WM8971 if I2C
